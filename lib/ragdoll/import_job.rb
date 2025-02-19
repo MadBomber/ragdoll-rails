@@ -2,8 +2,6 @@
 
 # frozen_string_literal: true
 
-require "solid_job"
-
 module Ragdoll
   class ImportJob < SolidJob::Base
     def perform(file)
