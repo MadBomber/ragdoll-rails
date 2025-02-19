@@ -1,0 +1,31 @@
+# This file contains the default configuration settings for the Ragdoll gem, including database configurations.
+
+default: &default
+  database:
+    host: localhost
+    database: ragdoll_development
+    user: user
+    password: password
+    pool: 5
+    timeout: 5000
+
+  llm:
+    embeddings_model: "llama-2-7b"
+    reranking_model: "llama-2-13b"
+    chat_model: "llama-2-70b"
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+  database:
+    database: ragdoll_test
+
+production:
+  <<: *default
+  database:
+    host: <%= ENV.fetch("RAGDOLL_HOST") %>
+    database: <%= ENV.fetch("RAGDOLL_DATABASE") %>
+    user: <%= ENV.fetch("RAGDOLL_USER") %>
+    password: <%= ENV.fetch("RAGDOLL_PASSWORD") %>
