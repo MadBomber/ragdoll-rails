@@ -3,7 +3,7 @@
 require 'thor'
 
 module Ragdoll
-  class JobsTask < Thor
+  class Jobs < Thor
     desc "jobs [JOB_ID]", "Report the status of all running and queued import jobs, or a specific job if JOB_ID is provided"
     method_option :stop_all, type: :boolean, default: false, desc: "Stop all running and queued jobs"
     method_option :pause_all, type: :boolean, default: false, desc: "Pause all running jobs"

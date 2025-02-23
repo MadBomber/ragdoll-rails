@@ -4,7 +4,7 @@ require 'thor'
 require_relative '../../ragdoll/import_job'
 
 module Ragdoll
-  class ImportTask < Thor
+  class Import < Thor
     desc "import PATH", "Import documents from a file, glob, or directory"
     method_option :recursive, aliases: "-r", type: :boolean, default: false, desc: "Recursively import files from directories"
     method_option :jobs, aliases: ["-j", "--jobs"], type: :numeric, default: 1, desc: "Number of concurrent import jobs"

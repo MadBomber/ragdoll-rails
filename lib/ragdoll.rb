@@ -6,6 +6,8 @@
 
 require "ragdoll/version"
 require "ragdoll/engine"
+require "ragdoll/import_job"
+require "tasks/ragdoll"
 
 module Ragdoll
   class Error < StandardError; end

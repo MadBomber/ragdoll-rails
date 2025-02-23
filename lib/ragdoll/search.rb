@@ -3,7 +3,7 @@
 # frozen_string_literal: true
 
 module Ragdoll
-  class Search
+  class Search < Thor
     def initialize(prompt)
       @prompt = prompt
     end
