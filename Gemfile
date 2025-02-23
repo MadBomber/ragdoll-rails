@@ -16,5 +16,10 @@ gem "pg"            # Pg is the Ruby interface to the PostgreSQL RDBMS
 gem "pgvector"      # pgvector support for Ruby
 gem "rake"          # Rake is a Make-like program implemented in Ruby
 gem "rspec"         # rspec-3.13.0
+
+group :development do
+  gem "annotate"    # Annotate models, routes, fixtures, and others based on the database schema
+end
 gem "solid_queue"   # Database-backed Active Job backend.
+gem "searchkick"    # Elasticsearch-backed search for Rails
 gem "thor"          # A scripting framework that replaces rake, sake and rubigen
