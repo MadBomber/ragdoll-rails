@@ -2,6 +2,8 @@
 
 # frozen_string_literal: true
 
+require "rails"
+require "action_dispatch"
 require "rails/engine"
 
 module Ragdoll
