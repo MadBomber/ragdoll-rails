@@ -30,6 +30,6 @@ Gem::Specification.new do |spec|
   spec.bindir        = "bin"
   spec.require_paths = ["lib"]
   
-  spec.add_dependency "rails", "~> 7.1"
+  spec.add_dependency "rails", ">= 8.0"
 end
 
