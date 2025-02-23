@@ -17,7 +17,21 @@ module Ragdoll
 
     def store_in_database(document)
       # Store the document in the ragdoll_documents table
-      doc_record = Ragdoll::Document.create!(metadata: { name: "Document Name", summary: "Document Summary" }, file: document, updated_at: File.mtime(document))
+      doc_record = Ragdoll::Document.create!(
+        metadata: {
+          name: File.basename(document),
+          path: document,
+          size: File.size(document),
+          type: File.extname(document),
+          modified_at: File.mtime(document),
+          created_at: File.ctime(document),
+          summary: "Document Summary",
+          import_started_at: Time.current,
+          import_completed_at: nil
+        },
+        file: document,
+        updated_at: File.mtime(document)
+      )
 
       # Store each vectorized chunk in the ragdoll_embeddings table
       vectorized_chunks.each do |vector|

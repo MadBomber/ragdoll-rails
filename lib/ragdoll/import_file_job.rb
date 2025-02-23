@@ -7,6 +7,22 @@ module Ragdoll
     def perform(file)
       return unless File.file?(file)
 
+      # Check if the file is a text file
+      if text_file?(file)
+        process_text_file(file)
+      else
+        puts "File #{file} is not a readable text file. Skipping import."
+      end
+    end
+
+    private
+
+    def text_file?(file)
+      # Simple check for text files based on file extension
+      %w[.txt .md .csv].include?(File.extname(file).downcase)
+    end
+
+    def process_text_file(file)
       modification_time = File.mtime(file)
       existing_document = Ragdoll::Document.find_by(file: file)
 
@@ -21,6 +37,9 @@ module Ragdoll
       ingestion = Ragdoll::Ingestion.new(document)
       vectorized_chunks = ingestion.chunk_and_vectorize
       ingestion.store_in_database(document)
+      ingestion.store_in_database(document)
+      doc_record = Ragdoll::Document.find_by(file: file)
+      doc_record.update(metadata: doc_record.metadata.merge(import_completed_at: Time.current))
       puts "Imported #{file} successfully."
     end
   end
