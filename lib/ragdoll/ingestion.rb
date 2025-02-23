@@ -15,8 +15,14 @@ module Ragdoll
       vectorized_chunks
     end
 
-    def store_in_database
-      # Implement logic to store vectorized data in the database
+    def store_in_database(document)
+      # Store the document in the ragdoll_documents table
+      doc_record = Ragdoll::Document.create!(metadata: { name: "Document Name", summary: "Document Summary" }, file: document, updated_at: File.mtime(document))
+
+      # Store each vectorized chunk in the ragdoll_embeddings table
+      vectorized_chunks.each do |vector|
+        Ragdoll::Embedding.create!(document: doc_record, vector: vector, metadata: { content: "Chunk Content", propositions: "Chunk Propositions" })
+      end
     end
 
     private

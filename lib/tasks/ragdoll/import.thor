@@ -23,8 +23,10 @@ module Ragdoll
       files.each do |file|
         next unless File.file?(file)
 
-        queue.push(file) do |file|
-          Ragdoll::ImportJob.perform_async(file)
+        if File.directory?(file)
+          Ragdoll::ImportDirectoryJob.perform_later(file, recursive: options[:recursive])
+        else
+          Ragdoll::ImportFileJob.perform_later(file)
         end
       end
     end

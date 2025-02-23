@@ -342,6 +342,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  activejob
   activerecord
   ai_client
   amazing_print

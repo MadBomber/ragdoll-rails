@@ -5,6 +5,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "activerecord"  # Object-relational mapper framework (part of Rails).
+gem "activejob"     # Framework for declaring jobs and making them run on a variety of queuing backends
 gem "ai_client"     # A generic AI Client for many providers
 gem "amazing_print" # Pretty print Ruby objects with proper indentation and colors
 gem "debug_me"      # A tool to print the labeled value of variables.
