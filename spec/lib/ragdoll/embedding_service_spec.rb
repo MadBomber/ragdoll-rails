@@ -1,12 +1,12 @@
 require 'rails_helper'
 
 RSpec.describe Ragdoll::EmbeddingService do
-  let(:mock_client) { double('openai_client') }
+  let(:mock_client) { double('ruby_llm_client') }
   let(:service) { described_class.new(client: mock_client) }
 
   describe '#initialize' do
-    it 'creates default OpenAI client when none provided' do
-      expect(OpenAI::Client).to receive(:new).with(access_token: 'test-key')
+    it 'configures RubyLLM when no client provided' do
+      expect(RubyLLM).to receive(:configure)
       described_class.new
     end
 
@@ -22,7 +22,7 @@ RSpec.describe Ragdoll::EmbeddingService do
 
     context 'with successful API response' do
       before do
-        allow(mock_client).to receive(:embeddings).and_return({
+        allow(mock_client).to receive(:embed).and_return({
           'data' => [{ 'embedding' => mock_embedding }]
         })
       end
@@ -31,11 +31,9 @@ RSpec.describe Ragdoll::EmbeddingService do
         result = service.generate_embedding(text)
         
         expect(result).to eq(mock_embedding)
-        expect(mock_client).to have_received(:embeddings).with(
-          parameters: {
-            model: 'text-embedding-3-small',
-            input: text
-          }
+        expect(mock_client).to have_received(:embed).with(
+          input: text,
+          model: 'text-embedding-3-small'
         )
       end
 
@@ -45,11 +43,9 @@ RSpec.describe Ragdoll::EmbeddingService do
         
         service.generate_embedding(dirty_text)
         
-        expect(mock_client).to have_received(:embeddings).with(
-          parameters: {
-            model: 'text-embedding-3-small',
-            input: cleaned_text
-          }
+        expect(mock_client).to have_received(:embed).with(
+          input: cleaned_text,
+          model: 'text-embedding-3-small'
         )
       end
 
@@ -59,7 +55,7 @@ RSpec.describe Ragdoll::EmbeddingService do
         service.generate_embedding(long_text)
         
         # Should truncate but still call the API
-        expect(mock_client).to have_received(:embeddings)
+        expect(mock_client).to have_received(:embed)
       end
     end
 
@@ -72,8 +68,17 @@ RSpec.describe Ragdoll::EmbeddingService do
     end
 
     context 'with API errors' do
+      it 'raises EmbeddingError for LLM provider errors' do
+        allow(mock_client).to receive(:embed)
+          .and_raise(RubyLLM::Error.new("LLM provider error"))
+        
+        expect {
+          service.generate_embedding(text)
+        }.to raise_error(Ragdoll::EmbeddingService::EmbeddingError, /LLM provider error/)
+      end
+
       it 'raises EmbeddingError for network errors' do
-        allow(mock_client).to receive(:embeddings)
+        allow(mock_client).to receive(:embed)
           .and_raise(Faraday::Error.new("Network error"))
         
         expect {
@@ -82,7 +87,7 @@ RSpec.describe Ragdoll::EmbeddingService do
       end
 
       it 'raises EmbeddingError for JSON parsing errors' do
-        allow(mock_client).to receive(:embeddings)
+        allow(mock_client).to receive(:embed)
           .and_raise(JSON::ParserError.new("Invalid JSON"))
         
         expect {
@@ -91,7 +96,7 @@ RSpec.describe Ragdoll::EmbeddingService do
       end
 
       it 'raises EmbeddingError for invalid response format' do
-        allow(mock_client).to receive(:embeddings).and_return({
+        allow(mock_client).to receive(:embed).and_return({
           'error' => 'Invalid request'
         })
         
@@ -101,7 +106,7 @@ RSpec.describe Ragdoll::EmbeddingService do
       end
 
       it 'raises EmbeddingError for other exceptions' do
-        allow(mock_client).to receive(:embeddings)
+        allow(mock_client).to receive(:embed)
           .and_raise(StandardError.new("Unknown error"))
         
         expect {
@@ -119,7 +124,7 @@ RSpec.describe Ragdoll::EmbeddingService do
 
     context 'with successful API response' do
       before do
-        allow(mock_client).to receive(:embeddings).and_return({
+        allow(mock_client).to receive(:embed).and_return({
           'data' => mock_embeddings.map { |embedding| { 'embedding' => embedding } }
         })
       end
@@ -128,11 +133,9 @@ RSpec.describe Ragdoll::EmbeddingService do
         result = service.generate_embeddings_batch(texts)
         
         expect(result).to eq(mock_embeddings)
-        expect(mock_client).to have_received(:embeddings).with(
-          parameters: {
-            model: 'text-embedding-3-small',
-            input: texts
-          }
+        expect(mock_client).to have_received(:embed).with(
+          input: texts,
+          model: 'text-embedding-3-small'
         )
       end
 
@@ -142,11 +145,9 @@ RSpec.describe Ragdoll::EmbeddingService do
         
         service.generate_embeddings_batch(texts_with_blanks)
         
-        expect(mock_client).to have_received(:embeddings).with(
-          parameters: {
-            model: 'text-embedding-3-small',
-            input: expected_clean_texts
-          }
+        expect(mock_client).to have_received(:embed).with(
+          input: expected_clean_texts,
+          model: 'text-embedding-3-small'
         )
       end
     end
@@ -160,7 +161,7 @@ RSpec.describe Ragdoll::EmbeddingService do
 
     context 'with API errors' do
       it 'raises EmbeddingError for batch processing errors' do
-        allow(mock_client).to receive(:embeddings)
+        allow(mock_client).to receive(:embed)
           .and_raise(Faraday::Error.new("Batch error"))
         
         expect {
@@ -258,14 +259,14 @@ RSpec.describe Ragdoll::EmbeddingService do
       )
       
       expect(ActiveRecord::Base.connection).to have_received(:exec_query)
-        .with(anything, 'search_similar_embeddings', [query_embedding.to_s, 0.7, 10])
+        .with(anything, 'search_similar_embeddings', [query_embedding.to_s, 0.7, 10, 1536, 'text-embedding-3-small'])
     end
 
     it 'uses custom limit and threshold' do
       service.search_similar(query_embedding, limit: 5, threshold: 0.8)
       
       expect(ActiveRecord::Base.connection).to have_received(:exec_query)
-        .with(anything, 'search_similar_embeddings', [query_embedding.to_s, 0.8, 5])
+        .with(anything, 'search_similar_embeddings', [query_embedding.to_s, 0.8, 5, 1536, 'text-embedding-3-small'])
     end
 
     it 'parses metadata JSON in results' do
@@ -339,17 +340,15 @@ RSpec.describe Ragdoll::EmbeddingService do
   describe 'integration with configuration' do
     it 'uses configured embedding model' do
       with_ragdoll_config(embedding_model: 'text-embedding-3-large') do
-        allow(mock_client).to receive(:embeddings).and_return({
+        allow(mock_client).to receive(:embed).and_return({
           'data' => [{ 'embedding' => [1.0] }]
         })
         
         service.generate_embedding("test")
         
-        expect(mock_client).to have_received(:embeddings).with(
-          parameters: {
-            model: 'text-embedding-3-large',
-            input: 'test'
-          }
+        expect(mock_client).to have_received(:embed).with(
+          input: 'test',
+          model: 'text-embedding-3-large'
         )
       end
     end
@@ -361,7 +360,7 @@ RSpec.describe Ragdoll::EmbeddingService do
         service.search_similar([1.0])
         
         expect(ActiveRecord::Base.connection).to have_received(:exec_query)
-          .with(anything, anything, ['[1.0]', 0.85, 10])
+          .with(anything, anything, ['[1.0]', 0.85, 10, 1, 'text-embedding-3-small'])
       end
     end
   end

@@ -44,8 +44,8 @@ Gem::Specification.new do |spec|
   # Background job processing
   spec.add_dependency "sidekiq", "~> 7.0"
 
-  # Text processing
-  spec.add_dependency "ruby-openai", "~> 6.0"
+  # Text processing and LLM integration
+  spec.add_dependency "ruby_llm", "~> 1.3"
 
   # Document parsing
   spec.add_dependency "pdf-reader", "~> 2.0"

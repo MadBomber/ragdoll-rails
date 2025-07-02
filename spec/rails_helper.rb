@@ -58,7 +58,11 @@ RSpec.configure do |config|
     
     # Set test configuration
     Ragdoll.configure do |ragdoll_config|
-      ragdoll_config.openai_api_key = 'test-key'
+      ragdoll_config.llm_provider = :openai
+      ragdoll_config.embedding_provider = nil
+      ragdoll_config.llm_config = {
+        openai: { api_key: 'test-key' }
+      }
       ragdoll_config.embedding_model = 'text-embedding-3-small'
       ragdoll_config.chunk_size = 500
       ragdoll_config.chunk_overlap = 100

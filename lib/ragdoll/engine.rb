@@ -3,7 +3,7 @@
 require "rails/engine"
 require "pgvector"
 require "sidekiq"
-require "ruby/openai"
+require "ruby_llm"
 
 module Ragdoll
   class Engine < ::Rails::Engine

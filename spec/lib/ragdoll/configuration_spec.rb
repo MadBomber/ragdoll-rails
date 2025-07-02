@@ -5,7 +5,8 @@ RSpec.describe Ragdoll::Configuration do
 
   describe '#initialize' do
     it 'sets default values' do
-      expect(config.openai_api_key).to eq('test-key') # From test environment
+      expect(config.llm_provider).to eq(:openai)
+      expect(config.embedding_provider).to be_nil
       expect(config.embedding_model).to eq('text-embedding-3-small')
       expect(config.chunk_size).to eq(1000)
       expect(config.chunk_overlap).to eq(200)
@@ -15,23 +16,35 @@ RSpec.describe Ragdoll::Configuration do
       expect(config.prompt_template).to be_nil
       expect(config.enable_search_analytics).to be true
       expect(config.cache_embeddings).to be true
+      expect(config.max_embedding_dimensions).to eq(3072)
     end
 
-    it 'reads OpenAI API key from environment' do
+    it 'reads LLM config from environment' do
       original_key = ENV['OPENAI_API_KEY']
       ENV['OPENAI_API_KEY'] = 'env-test-key'
       
       new_config = described_class.new
-      expect(new_config.openai_api_key).to eq('env-test-key')
+      expect(new_config.llm_config[:openai][:api_key]).to eq('env-test-key')
       
       ENV['OPENAI_API_KEY'] = original_key
     end
   end
 
   describe 'attribute accessors' do
-    it 'allows reading and writing openai_api_key' do
-      config.openai_api_key = 'new-key'
-      expect(config.openai_api_key).to eq('new-key')
+    it 'allows reading and writing llm_provider' do
+      config.llm_provider = :anthropic
+      expect(config.llm_provider).to eq(:anthropic)
+    end
+
+    it 'allows reading and writing embedding_provider' do
+      config.embedding_provider = :google
+      expect(config.embedding_provider).to eq(:google)
+    end
+
+    it 'allows reading and writing llm_config' do
+      new_config = { openai: { api_key: 'new-key' } }
+      config.llm_config = new_config
+      expect(config.llm_config).to eq(new_config)
     end
 
     it 'allows reading and writing embedding_model' do
@@ -78,6 +91,11 @@ RSpec.describe Ragdoll::Configuration do
     it 'allows reading and writing cache_embeddings' do
       config.cache_embeddings = false
       expect(config.cache_embeddings).to be false
+    end
+
+    it 'allows reading and writing max_embedding_dimensions' do
+      config.max_embedding_dimensions = 1536
+      expect(config.max_embedding_dimensions).to eq(1536)
     end
   end
 end
@@ -150,29 +168,39 @@ RSpec.describe Ragdoll do
       TEMPLATE
 
       Ragdoll.configure do |config|
-        config.openai_api_key = 'custom-key-123'
+        config.llm_provider = :anthropic
+        config.embedding_provider = :openai
+        config.llm_config = {
+          openai: { api_key: 'custom-openai-key' },
+          anthropic: { api_key: 'custom-anthropic-key' }
+        }
         config.embedding_model = 'text-embedding-3-large'
         config.chunk_size = 1500
         config.chunk_overlap = 300
         config.search_similarity_threshold = 0.8
         config.max_search_results = 15
-        config.default_model = 'gpt-4-turbo'
+        config.default_model = 'claude-3-sonnet'
         config.prompt_template = custom_template
         config.enable_search_analytics = false
         config.cache_embeddings = true
+        config.max_embedding_dimensions = 1536
       end
 
       config = Ragdoll.configuration
-      expect(config.openai_api_key).to eq('custom-key-123')
+      expect(config.llm_provider).to eq(:anthropic)
+      expect(config.embedding_provider).to eq(:openai)
+      expect(config.llm_config[:openai][:api_key]).to eq('custom-openai-key')
+      expect(config.llm_config[:anthropic][:api_key]).to eq('custom-anthropic-key')
       expect(config.embedding_model).to eq('text-embedding-3-large')
       expect(config.chunk_size).to eq(1500)
       expect(config.chunk_overlap).to eq(300)
       expect(config.search_similarity_threshold).to eq(0.8)
       expect(config.max_search_results).to eq(15)
-      expect(config.default_model).to eq('gpt-4-turbo')
+      expect(config.default_model).to eq('claude-3-sonnet')
       expect(config.prompt_template).to eq(custom_template)
       expect(config.enable_search_analytics).to be false
       expect(config.cache_embeddings).to be true
+      expect(config.max_embedding_dimensions).to eq(1536)
     end
   end
 
@@ -227,23 +255,23 @@ RSpec.describe Ragdoll do
     it 'configuration is used by EmbeddingService' do
       Ragdoll.configure do |config|
         config.embedding_model = 'custom-model'
+        config.llm_provider = :openai
+        config.llm_config = { openai: { api_key: 'test-key' } }
       end
 
-      # Mock the OpenAI client to verify the model is used
-      mock_client = double('openai_client')
-      allow(OpenAI::Client).to receive(:new).and_return(mock_client)
-      allow(mock_client).to receive(:embeddings).and_return({
+      # Mock the RubyLLM client to verify the model is used
+      mock_client = double('ruby_llm_client')
+      allow(RubyLLM::Client).to receive(:new).and_return(mock_client)
+      allow(mock_client).to receive(:embed).and_return({
         'data' => [{ 'embedding' => [1.0] }]
       })
 
       service = Ragdoll::EmbeddingService.new
       service.generate_embedding("test")
 
-      expect(mock_client).to have_received(:embeddings).with(
-        parameters: {
-          model: 'custom-model',
-          input: 'test'
-        }
+      expect(mock_client).to have_received(:embed).with(
+        input: 'test',
+        model: 'custom-model'
       )
     end
 
@@ -256,6 +284,23 @@ RSpec.describe Ragdoll do
       # These would be used as defaults in document processing
       expect(Ragdoll.configuration.chunk_size).to eq(1200)
       expect(Ragdoll.configuration.chunk_overlap).to eq(250)
+    end
+
+    it 'supports multiple LLM providers' do
+      Ragdoll.configure do |config|
+        config.llm_provider = :anthropic
+        config.embedding_provider = :google
+        config.llm_config = {
+          anthropic: { api_key: 'claude-key' },
+          google: { api_key: 'google-key', project_id: 'project' }
+        }
+      end
+
+      config = Ragdoll.configuration
+      expect(config.llm_provider).to eq(:anthropic)
+      expect(config.embedding_provider).to eq(:google)
+      expect(config.llm_config[:anthropic][:api_key]).to eq('claude-key')
+      expect(config.llm_config[:google][:api_key]).to eq('google-key')
     end
   end
 
@@ -278,20 +323,26 @@ RSpec.describe Ragdoll do
     it 'allows modification after initial configuration' do
       Ragdoll.configure do |config|
         config.chunk_size = 800
+        config.llm_provider = :openai
       end
 
       expect(Ragdoll.configuration.chunk_size).to eq(800)
+      expect(Ragdoll.configuration.llm_provider).to eq(:openai)
 
       # Modify directly
       Ragdoll.configuration.chunk_size = 900
+      Ragdoll.configuration.llm_provider = :anthropic
       expect(Ragdoll.configuration.chunk_size).to eq(900)
+      expect(Ragdoll.configuration.llm_provider).to eq(:anthropic)
 
       # Configure again
       Ragdoll.configure do |config|
         config.chunk_size = 1000
+        config.llm_provider = :google
       end
 
       expect(Ragdoll.configuration.chunk_size).to eq(1000)
+      expect(Ragdoll.configuration.llm_provider).to eq(:google)
     end
   end
 end

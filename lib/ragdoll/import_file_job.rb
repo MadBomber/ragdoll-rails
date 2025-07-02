@@ -133,12 +133,14 @@ module Ragdoll
         document.ragdoll_embeddings.create!(
           content: chunk_content,
           embedding: embedding_vector,
+          embedding_dimensions: embedding_vector&.length,
           model_name: Ragdoll.configuration.embedding_model,
           token_count: token_count,
           chunk_index: index,
           metadata: {
             chunk_length: chunk_content.length,
-            word_count: chunk_content.split.length
+            word_count: chunk_content.split.length,
+            embedding_provider: Ragdoll.configuration.embedding_provider&.to_s
           }.merge(metadata)
         )
       end

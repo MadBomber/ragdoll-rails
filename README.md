@@ -8,17 +8,19 @@
 
 > CAUTION: Ragdoll is still under development and may not be suitable for production use.
 
-**Ragdoll** is a powerful Rails engine that adds **Retrieval Augmented Generation (RAG)** capabilities to any Rails application. It provides semantic search, document ingestion, and context-enhanced AI prompts using vector embeddings and PostgreSQL with pgvector.
+**Ragdoll** is a powerful Rails engine that adds **Retrieval Augmented Generation (RAG)** capabilities to any Rails application. It provides semantic search, document ingestion, and context-enhanced AI prompts using vector embeddings and PostgreSQL with pgvector. With support for multiple LLM providers through ruby_llm, you can use OpenAI, Anthropic, Google, Azure, Ollama, and more.
 
 ## ✨ Features
 
-- 🔍 **Semantic Search** - Vector similarity search using OpenAI embeddings and pgvector
+- 🔍 **Semantic Search** - Vector similarity search with flexible embedding models and pgvector
+- 🤖 **Multi-Provider Support** - OpenAI, Anthropic, Google, Azure, Ollama, HuggingFace via ruby_llm
 - 📄 **Multi-format Support** - PDF, DOCX, text, HTML, JSON, XML, CSV document parsing
 - 🧠 **Context Enhancement** - Automatically enhance AI prompts with relevant context
 - ⚡ **Background Processing** - Asynchronous document processing with Sidekiq
 - 🎛️ **Simple API** - Clean, intuitive interface for Rails integration
 - 📊 **Analytics** - Search analytics and document management insights
 - 🔧 **Configurable** - Flexible chunking, embedding, and search parameters
+- 🔄 **Flexible Vectors** - Variable-length embeddings for different models
 
 ## 🚀 Quick Start
 
@@ -50,10 +52,22 @@ rails db:migrate
 ```ruby
 # config/initializers/ragdoll.rb
 Ragdoll.configure do |config|
-  config.openai_api_key = ENV['OPENAI_API_KEY']
+  # LLM Provider Configuration
+  config.llm_provider = :openai  # or :anthropic, :google, :azure, :ollama, :huggingface
+  config.embedding_provider = :openai  # optional, defaults to llm_provider
+  
+  # Provider-specific API keys
+  config.llm_config = {
+    openai: { api_key: ENV['OPENAI_API_KEY'] },
+    anthropic: { api_key: ENV['ANTHROPIC_API_KEY'] },
+    google: { api_key: ENV['GOOGLE_API_KEY'], project_id: ENV['GOOGLE_PROJECT_ID'] }
+  }
+  
+  # Embedding and processing settings
   config.embedding_model = 'text-embedding-3-small'
   config.chunk_size = 1000
   config.search_similarity_threshold = 0.7
+  config.max_embedding_dimensions = 3072  # supports variable-length vectors
 end
 ```
 
@@ -248,22 +262,63 @@ rake ragdoll:document:show[123]
 
 ## ⚙️ Configuration Options
 
+### Multi-Provider Configuration
+
 ```ruby
 Ragdoll.configure do |config|
-  # OpenAI settings
-  config.openai_api_key = ENV['OPENAI_API_KEY']
-  config.embedding_model = 'text-embedding-3-small'
-  config.default_model = 'gpt-4'
+  # Primary LLM provider for chat/completion
+  config.llm_provider = :anthropic
+  
+  # Separate provider for embeddings (optional)
+  config.embedding_provider = :openai
+  
+  # Provider-specific configurations
+  config.llm_config = {
+    openai: {
+      api_key: ENV['OPENAI_API_KEY'],
+      organization: ENV['OPENAI_ORGANIZATION'],  # optional
+      project: ENV['OPENAI_PROJECT']              # optional
+    },
+    anthropic: {
+      api_key: ENV['ANTHROPIC_API_KEY']
+    },
+    google: {
+      api_key: ENV['GOOGLE_API_KEY'],
+      project_id: ENV['GOOGLE_PROJECT_ID']
+    },
+    azure: {
+      api_key: ENV['AZURE_API_KEY'],
+      endpoint: ENV['AZURE_ENDPOINT'],
+      api_version: ENV['AZURE_API_VERSION']
+    },
+    ollama: {
+      endpoint: ENV['OLLAMA_ENDPOINT'] || 'http://localhost:11434'
+    },
+    huggingface: {
+      api_key: ENV['HUGGINGFACE_API_KEY']
+    }
+  }
+end
+```
 
-  # Chunking settings
+### Model and Processing Settings
+
+```ruby
+Ragdoll.configure do |config|
+  # Embedding configuration
+  config.embedding_model = 'text-embedding-3-small'
+  config.max_embedding_dimensions = 3072  # supports variable dimensions
+  config.default_model = 'gpt-4'  # for chat/completion
+
+  # Text chunking settings
   config.chunk_size = 1000
   config.chunk_overlap = 200
 
-  # Search settings
+  # Search and similarity settings
   config.search_similarity_threshold = 0.7
   config.max_search_results = 10
 
-  # Analytics and caching
+  # Analytics and performance
   config.enable_search_analytics = true
   config.cache_embeddings = true
 
@@ -276,13 +331,52 @@ Ragdoll.configure do |config|
 end
 ```
 
+### Provider Examples
+
+```ruby
+# OpenAI Configuration
+Ragdoll.configure do |config|
+  config.llm_provider = :openai
+  config.llm_config = {
+    openai: { api_key: ENV['OPENAI_API_KEY'] }
+  }
+  config.embedding_model = 'text-embedding-3-small'
+end
+
+# Anthropic + OpenAI Embeddings
+Ragdoll.configure do |config|
+  config.llm_provider = :anthropic
+  config.embedding_provider = :openai
+  config.llm_config = {
+    anthropic: { api_key: ENV['ANTHROPIC_API_KEY'] },
+    openai: { api_key: ENV['OPENAI_API_KEY'] }
+  }
+end
+
+# Local Ollama Setup
+Ragdoll.configure do |config|
+  config.llm_provider = :ollama
+  config.llm_config = {
+    ollama: { endpoint: 'http://localhost:11434' }
+  }
+  config.embedding_model = 'nomic-embed-text'
+end
+```
+
 ## 🏗️ Database Schema
 
 Ragdoll creates three main tables:
 
 - **`ragdoll_documents`** - Document metadata and content
-- **`ragdoll_embeddings`** - Vector embeddings with pgvector
-- **`ragdoll_searches`** - Search analytics and caching
+- **`ragdoll_embeddings`** - Vector embeddings with pgvector (variable dimensions)
+- **`ragdoll_searches`** - Search analytics and performance tracking
+
+### Key Features
+
+- **Variable Vector Dimensions**: Supports different embedding models with different dimensions
+- **Model Tracking**: Tracks which embedding model was used for each vector
+- **Performance Indexes**: Optimized for similarity search and filtering
+- **Search Analytics**: Comprehensive search performance and usage tracking
 
 ## 📊 Analytics and Monitoring
 
@@ -292,8 +386,22 @@ stats = Ragdoll.client.stats
 # => { total_documents: 150, total_embeddings: 1250, ... }
 
 # Search analytics
-analytics = Ragdoll.client.search_analytics(days: 30)
-# => { total_searches: 500, average_results: 8.5, ... }
+analytics = Ragdoll::Search.analytics(days: 30)
+# => {
+#   total_searches: 500,
+#   unique_queries: 350,
+#   average_results: 8.5,
+#   average_search_time: 0.15,
+#   success_rate: 85.2,
+#   most_common_queries: [...],
+#   search_types: { semantic: 450, keyword: 50 },
+#   models_used: { "text-embedding-3-small": 400, "text-embedding-3-large": 100 },
+#   performance_stats: { fastest: 0.05, slowest: 2.3, median: 0.12 }
+# }
+
+# Performance monitoring
+slow_searches = Ragdoll::Search.slow_searches(2.0)  # > 2 seconds
+failed_searches = Ragdoll::Search.failed
 
 # Health check
 healthy = Ragdoll.client.healthy?
@@ -333,7 +441,19 @@ end
 - **Rails** 8.0+
 - **PostgreSQL** with pgvector extension
 - **Sidekiq** for background processing
-- **OpenAI API** for embeddings
+- **ruby_llm** for multi-provider LLM support
+- **LLM Provider APIs** (OpenAI, Anthropic, Google, etc.)
+
+### Supported LLM Providers
+
+| Provider | Chat/Completion | Embeddings | Notes |
+|----------|----------------|------------|---------|
+| OpenAI | ✅ | ✅ | GPT models, text-embedding-3-* |
+| Anthropic | ✅ | ❌ | Claude models |
+| Google | ✅ | ✅ | Gemini models |
+| Azure OpenAI | ✅ | ✅ | Azure-hosted OpenAI |
+| Ollama | ✅ | ✅ | Local models |
+| HuggingFace | ✅ | ✅ | Various open-source models |
 
 ## 🤝 Contributing
 

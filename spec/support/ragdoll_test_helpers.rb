@@ -44,8 +44,8 @@ module RagdollTestHelpers
     Dir.glob(Rails.root.join('tmp', 'test*')).each { |f| File.delete(f) if File.exist?(f) }
   end
 
-  # Mock OpenAI API calls
-  def mock_openai_embedding_response(text)
+  # Mock RubyLLM API calls
+  def mock_ruby_llm_embedding_response(text)
     {
       'data' => [
         {
@@ -55,9 +55,9 @@ module RagdollTestHelpers
     }
   end
 
-  def stub_openai_embeddings
-    allow_any_instance_of(OpenAI::Client).to receive(:embeddings) do |client, params|
-      input = params[:parameters][:input]
+  def stub_ruby_llm_embeddings
+    allow_any_instance_of(RubyLLM::Client).to receive(:embed) do |client, params|
+      input = params[:input]
       if input.is_a?(Array)
         {
           'data' => input.map.with_index do |text, index|
@@ -67,7 +67,7 @@ module RagdollTestHelpers
           end
         }
       else
-        mock_openai_embedding_response(input)
+        mock_ruby_llm_embedding_response(input)
       end
     end
   end
@@ -90,6 +90,8 @@ module RagdollTestHelpers
         document: document,
         content: chunk_content,
         embedding: embedding,
+        embedding_dimensions: 1536,
+        model_name: 'text-embedding-3-small',
         chunk_index: i
       )
     end
@@ -122,9 +124,13 @@ module RagdollTestHelpers
   end
 
   # Error simulation helpers
+  def simulate_ruby_llm_error
+    allow_any_instance_of(RubyLLM::Client).to receive(:embed)
+      .and_raise(RubyLLM::Error.new("API Error"))
+  end
+
   def simulate_openai_error
-    allow_any_instance_of(OpenAI::Client).to receive(:embeddings)
-      .and_raise(Faraday::Error.new("API Error"))
+    simulate_ruby_llm_error
   end
 
   def simulate_parse_error
@@ -153,6 +159,8 @@ module RagdollTestHelpers
         document: document,
         content: chunk,
         embedding: embedding,
+        embedding_dimensions: 1536,
+        model_name: 'text-embedding-3-small',
         chunk_index: index
       )
     end

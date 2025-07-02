@@ -5,6 +5,7 @@ FactoryBot.define do
     association :document, factory: :ragdoll_document
     content { "This is a chunk of content from the document." }
     sequence(:embedding) { |n| Array.new(1536) { |i| (n + i) / 1000000.0 } }
+    embedding_dimensions { 1536 }
     model_name { "text-embedding-3-small" }
     token_count { 25 }
     sequence(:chunk_index) { |n| n }
@@ -14,6 +15,7 @@ FactoryBot.define do
     trait :high_similarity do
       # Create an embedding with known values for similarity testing
       embedding { Array.new(1536, 0.5) }
+      embedding_dimensions { 1536 }
     end
 
     trait :low_similarity do
@@ -49,6 +51,7 @@ FactoryBot.define do
     trait :different_model do
       model_name { "text-embedding-3-large" }
       embedding { Array.new(3072) { |i| i / 1000000.0 } } # Different dimension
+      embedding_dimensions { 3072 }
     end
   end
 end

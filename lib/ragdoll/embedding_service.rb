@@ -1,13 +1,15 @@
 # frozen_string_literal: true
 
-require 'openai'
+require 'ruby_llm'
 
 module Ragdoll
   class EmbeddingService
     class EmbeddingError < Error; end
 
     def initialize(client: nil)
-      @client = client || OpenAI::Client.new(access_token: Ragdoll.configuration.openai_api_key)
+      # ruby_llm uses global configuration, so we don't need a client instance
+      @client = client
+      configure_ruby_llm unless @client
     end
 
     def generate_embedding(text)
@@ -17,23 +19,32 @@ module Ragdoll
       cleaned_text = clean_text(text)
       
       begin
-        response = @client.embeddings(
-          parameters: {
-            model: Ragdoll.configuration.embedding_model,
-            input: cleaned_text
-          }
-        )
-
-        if response['data'] && response['data'].first && response['data'].first['embedding']
-          response['data'].first['embedding']
+        if @client
+          # Use custom client for testing
+          response = @client.embed(
+            input: cleaned_text,
+            model: Ragdoll.configuration.embedding_model
+          )
+          
+          if response && response['embeddings'] && response['embeddings'].first
+            response['embeddings'].first
+          elsif response && response['data'] && response['data'].first && response['data'].first['embedding']
+            response['data'].first['embedding']
+          else
+            raise EmbeddingError, "Invalid response format from embedding API"
+          end
         else
-          raise EmbeddingError, "Invalid response format from OpenAI API"
+          # Use ruby_llm global API
+          embedding = RubyLLM.embed(cleaned_text, model: Ragdoll.configuration.embedding_model)
+          embedding
         end
 
+      rescue RubyLLM::Error => e
+        raise EmbeddingError, "LLM provider error generating embedding: #{e.message}"
       rescue Faraday::Error => e
         raise EmbeddingError, "Network error generating embedding: #{e.message}"
       rescue JSON::ParserError => e
-        raise EmbeddingError, "Invalid JSON response from OpenAI API: #{e.message}"
+        raise EmbeddingError, "Invalid JSON response from embedding API: #{e.message}"
       rescue => e
         raise EmbeddingError, "Failed to generate embedding: #{e.message}"
       end
@@ -47,23 +58,33 @@ module Ragdoll
       return [] if cleaned_texts.empty?
 
       begin
-        response = @client.embeddings(
-          parameters: {
-            model: Ragdoll.configuration.embedding_model,
-            input: cleaned_texts
-          }
-        )
+        if @client
+          # Use custom client for testing
+          response = @client.embed(
+            input: cleaned_texts,
+            model: Ragdoll.configuration.embedding_model
+          )
 
-        if response['data']
-          response['data'].map { |item| item['embedding'] }
+          if response && response['embeddings']
+            response['embeddings']
+          elsif response && response['data']
+            response['data'].map { |item| item['embedding'] }
+          else
+            raise EmbeddingError, "Invalid response format from embedding API"
+          end
         else
-          raise EmbeddingError, "Invalid response format from OpenAI API"
+          # Use ruby_llm for batch processing - process individually
+          cleaned_texts.map do |text|
+            RubyLLM.embed(text, model: Ragdoll.configuration.embedding_model)
+          end
         end
 
+      rescue RubyLLM::Error => e
+        raise EmbeddingError, "LLM provider error generating embeddings: #{e.message}"
       rescue Faraday::Error => e
         raise EmbeddingError, "Network error generating embeddings: #{e.message}"
       rescue JSON::ParserError => e
-        raise EmbeddingError, "Invalid JSON response from OpenAI API: #{e.message}"
+        raise EmbeddingError, "Invalid JSON response from embedding API: #{e.message}"
       rescue => e
         raise EmbeddingError, "Failed to generate embeddings: #{e.message}"
       end
@@ -83,10 +104,13 @@ module Ragdoll
     end
 
     # Search for similar embeddings using cosine similarity
-    def search_similar(query_embedding, limit: 10, threshold: nil)
+    def search_similar(query_embedding, limit: 10, threshold: nil, model_name: nil)
       threshold ||= Ragdoll.configuration.search_similarity_threshold
+      model_name ||= Ragdoll.configuration.embedding_model
+      query_dimensions = query_embedding.length
 
       # Use raw SQL for vector similarity search with pgvector
+      # Filter by embedding dimensions to ensure compatibility
       sql = <<~SQL
         SELECT e.*, d.title, d.location,
                (e.embedding <=> $1::vector) AS distance,
@@ -94,6 +118,8 @@ module Ragdoll
         FROM ragdoll_embeddings e
         JOIN ragdoll_documents d ON d.id = e.document_id
         WHERE (1 - (e.embedding <=> $1::vector)) >= $2
+          AND e.embedding_dimensions = $4
+          AND ($5::text IS NULL OR e.model_name = $5)
         ORDER BY e.embedding <=> $1::vector
         LIMIT $3
       SQL
@@ -101,7 +127,7 @@ module Ragdoll
       results = ActiveRecord::Base.connection.exec_query(
         sql,
         'search_similar_embeddings',
-        [query_embedding.to_s, threshold, limit]
+        [query_embedding.to_s, threshold, limit, query_dimensions, model_name]
       )
 
       results.map do |row|
@@ -114,12 +140,44 @@ module Ragdoll
           similarity: row['similarity'].to_f,
           distance: row['distance'].to_f,
           chunk_index: row['chunk_index'],
-          metadata: JSON.parse(row['metadata'] || '{}')
+          metadata: JSON.parse(row['metadata'] || '{}'),
+          embedding_dimensions: row['embedding_dimensions'],
+          model_name: row['model_name']
         }
       end
     end
 
     private
+
+    def configure_ruby_llm
+      # Configure ruby_llm based on Ragdoll configuration
+      provider = Ragdoll.configuration.embedding_provider || Ragdoll.configuration.llm_provider
+      config = Ragdoll.configuration.llm_config[provider] || {}
+
+      RubyLLM.configure do |ruby_llm_config|
+        case provider
+        when :openai
+          ruby_llm_config.openai_api_key = config[:api_key]
+          ruby_llm_config.openai_organization = config[:organization] if config[:organization]
+          ruby_llm_config.openai_project = config[:project] if config[:project]
+        when :anthropic
+          ruby_llm_config.anthropic_api_key = config[:api_key]
+        when :google
+          ruby_llm_config.google_api_key = config[:api_key]
+          ruby_llm_config.google_project_id = config[:project_id] if config[:project_id]
+        when :azure
+          ruby_llm_config.azure_api_key = config[:api_key]
+          ruby_llm_config.azure_endpoint = config[:endpoint] if config[:endpoint]
+          ruby_llm_config.azure_api_version = config[:api_version] if config[:api_version]
+        when :ollama
+          ruby_llm_config.ollama_endpoint = config[:endpoint] if config[:endpoint]
+        when :huggingface
+          ruby_llm_config.huggingface_api_key = config[:api_key]
+        else
+          raise EmbeddingError, "Unsupported embedding provider: #{provider}"
+        end
+      end
+    end
 
     def clean_text(text)
       return '' if text.nil?
@@ -130,7 +188,7 @@ module Ragdoll
         .gsub(/\n+/, "\n")             # Multiple newlines to single newline
         .gsub(/\t+/, ' ')              # Tabs to spaces
       
-      # Truncate if too long (OpenAI has token limits)
+      # Truncate if too long (most embedding models have token limits)
       max_chars = 8000 # Conservative limit for most embedding models
       cleaned.length > max_chars ? cleaned[0, max_chars] : cleaned
     end
