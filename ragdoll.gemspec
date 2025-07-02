@@ -10,11 +10,11 @@ Gem::Specification.new do |spec|
   spec.authors     = ["Dewayne VanHoozer"]
   spec.email       = ["dvanhoozer@gmail.com"]
 
-  spec.summary     = "Ruby on Rails Engine"
+  spec.summary     = "Retrieval Augmented Generation for Rails"
   spec.description = "Under development.  Contributors welcome."
   spec.homepage    = "https://github.com/MadBomber/ragdoll"
   spec.license     = "MIT"
-  spec.required_ruby_version = ">= 3.1.0"
+  spec.required_ruby_version = ">= 3.2.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
@@ -29,7 +29,31 @@ Gem::Specification.new do |spec|
   spec.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md", "Thorfile"]
   spec.bindir        = "bin"
   spec.require_paths = ["lib"]
-  
-  spec.add_dependency "rails", "~> 8.0"
-end
 
+  # Core Rails engine dependency
+  spec.add_dependency "rails", "~> 8.0"
+
+  # Vector search and embeddings
+  spec.add_dependency "pg", "~> 1.1"
+  spec.add_dependency "pgvector", "~> 0.2"
+
+  # HTTP client for API calls
+  spec.add_dependency "faraday", "~> 2.0"
+  spec.add_dependency "faraday-retry", "~> 2.0"
+
+  # Background job processing
+  spec.add_dependency "sidekiq", "~> 7.0"
+
+  # Text processing
+  spec.add_dependency "ruby-openai", "~> 6.0"
+
+  # Document parsing
+  spec.add_dependency "pdf-reader", "~> 2.0"
+  spec.add_dependency "docx", "~> 0.8"
+  spec.add_dependency "rubyzip", "~> 2.0"
+
+  # Development dependencies
+  spec.add_development_dependency "rspec-rails", "~> 6.0"
+  spec.add_development_dependency "factory_bot_rails", "~> 6.0"
+  spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
+end
