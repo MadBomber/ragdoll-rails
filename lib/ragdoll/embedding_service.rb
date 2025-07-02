@@ -103,32 +103,81 @@ module Ragdoll
       dot_product / (magnitude1 * magnitude2)
     end
 
-    # Search for similar embeddings using cosine similarity
-    def search_similar(query_embedding, limit: 10, threshold: nil, model_name: nil)
+    # Search for similar embeddings using cosine similarity with usage-based ranking
+    def search_similar(query_embedding, limit: 10, threshold: nil, model_name: nil, options = {})
       threshold ||= Ragdoll.configuration.search_similarity_threshold
       model_name ||= Ragdoll.configuration.embedding_model
       query_dimensions = query_embedding.length
+      
+      # Options for ranking behavior
+      use_usage_ranking = options.fetch(:use_usage_ranking, true)
+      recency_weight = options.fetch(:recency_weight, 0.3)
+      frequency_weight = options.fetch(:frequency_weight, 0.7)
+      similarity_weight = options.fetch(:similarity_weight, 1.0)
 
-      # Use raw SQL for vector similarity search with pgvector
-      # Filter by embedding dimensions to ensure compatibility
-      sql = <<~SQL
-        SELECT e.*, d.title, d.location,
-               (e.embedding <=> $1::vector) AS distance,
-               (1 - (e.embedding <=> $1::vector)) AS similarity
-        FROM ragdoll_embeddings e
-        JOIN ragdoll_documents d ON d.id = e.document_id
-        WHERE (1 - (e.embedding <=> $1::vector)) >= $2
-          AND e.embedding_dimensions = $4
-          AND ($5::text IS NULL OR e.model_name = $5)
-        ORDER BY e.embedding <=> $1::vector
-        LIMIT $3
-      SQL
+      # Enhanced SQL with usage tracking for ranking
+      sql = if use_usage_ranking
+        <<~SQL
+          SELECT e.*, d.title, d.location,
+                 (e.embedding <=> $1::vector) AS distance,
+                 (1 - (e.embedding <=> $1::vector)) AS similarity,
+                 e.usage_count,
+                 e.returned_at,
+                 -- Calculate usage score
+                 CASE 
+                   WHEN e.returned_at IS NULL THEN 0
+                   ELSE (
+                     #{frequency_weight} * LEAST(LN(COALESCE(e.usage_count, 0) + 1) / LN(100), 1.0) +
+                     #{recency_weight} * EXP(-EXTRACT(EPOCH FROM (NOW() - e.returned_at)) / (30 * 24 * 3600))
+                   )
+                 END AS usage_score,
+                 -- Combined ranking score
+                 (
+                   #{similarity_weight} * (1 - (e.embedding <=> $1::vector)) +
+                   CASE 
+                     WHEN e.returned_at IS NULL THEN 0
+                     ELSE (
+                       #{frequency_weight} * LEAST(LN(COALESCE(e.usage_count, 0) + 1) / LN(100), 1.0) +
+                       #{recency_weight} * EXP(-EXTRACT(EPOCH FROM (NOW() - e.returned_at)) / (30 * 24 * 3600))
+                     )
+                   END
+                 ) AS combined_score
+          FROM ragdoll_embeddings e
+          JOIN ragdoll_documents d ON d.id = e.document_id
+          WHERE (1 - (e.embedding <=> $1::vector)) >= $2
+            AND e.embedding_dimensions = $4
+            AND ($5::text IS NULL OR e.model_name = $5)
+          ORDER BY combined_score DESC, similarity DESC
+          LIMIT $3
+        SQL
+      else
+        <<~SQL
+          SELECT e.*, d.title, d.location,
+                 (e.embedding <=> $1::vector) AS distance,
+                 (1 - (e.embedding <=> $1::vector)) AS similarity,
+                 e.usage_count,
+                 e.returned_at,
+                 0 as usage_score,
+                 (1 - (e.embedding <=> $1::vector)) as combined_score
+          FROM ragdoll_embeddings e
+          JOIN ragdoll_documents d ON d.id = e.document_id
+          WHERE (1 - (e.embedding <=> $1::vector)) >= $2
+            AND e.embedding_dimensions = $4
+            AND ($5::text IS NULL OR e.model_name = $5)
+          ORDER BY e.embedding <=> $1::vector
+          LIMIT $3
+        SQL
+      end
 
       results = ActiveRecord::Base.connection.exec_query(
         sql,
         'search_similar_embeddings',
         [query_embedding.to_s, threshold, limit, query_dimensions, model_name]
       )
+
+      # Record usage for returned embeddings
+      embedding_ids = results.map { |row| row['id'] }
+      record_usage_for_embeddings(embedding_ids) if embedding_ids.any?
 
       results.map do |row|
         {
@@ -142,12 +191,26 @@ module Ragdoll
           chunk_index: row['chunk_index'],
           metadata: JSON.parse(row['metadata'] || '{}'),
           embedding_dimensions: row['embedding_dimensions'],
-          model_name: row['model_name']
+          model_name: row['model_name'],
+          usage_count: row['usage_count']&.to_i || 0,
+          returned_at: row['returned_at'],
+          usage_score: row['usage_score']&.to_f || 0.0,
+          combined_score: row['combined_score']&.to_f || 0.0
         }
       end
     end
 
     private
+
+    def record_usage_for_embeddings(embedding_ids)
+      return if embedding_ids.empty?
+      
+      # Use batch update for better performance
+      Ragdoll::Embedding.record_batch_usage(embedding_ids)
+    rescue => e
+      Rails.logger.warn "Failed to record embedding usage: #{e.message}"
+      # Don't fail the search if usage recording fails
+    end
 
     def configure_ruby_llm
       # Configure ruby_llm based on Ragdoll configuration

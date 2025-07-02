@@ -11,6 +11,8 @@ FactoryBot.define do
     sequence(:chunk_index) { |n| n }
     metadata { { chunk_length: 50, word_count: 10 } }
     embedding_type { "text" }
+    usage_count { 0 }
+    returned_at { nil }
 
     trait :high_similarity do
       # Create an embedding with known values for similarity testing
@@ -52,6 +54,31 @@ FactoryBot.define do
       model_name { "text-embedding-3-large" }
       embedding { Array.new(3072) { |i| i / 1000000.0 } } # Different dimension
       embedding_dimensions { 3072 }
+    end
+
+    trait :used_once do
+      usage_count { 1 }
+      returned_at { 1.day.ago }
+    end
+
+    trait :frequently_used do
+      usage_count { 10 }
+      returned_at { 1.hour.ago }
+    end
+
+    trait :recently_used do
+      usage_count { 3 }
+      returned_at { 30.minutes.ago }
+    end
+
+    trait :old_usage do
+      usage_count { 5 }
+      returned_at { 30.days.ago }
+    end
+
+    trait :never_used do
+      usage_count { 0 }
+      returned_at { nil }
     end
   end
 end

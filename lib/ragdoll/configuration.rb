@@ -6,7 +6,9 @@ module Ragdoll
                   :chunk_size, :chunk_overlap, :search_similarity_threshold, :max_search_results,
                   :default_model, :prompt_template, :enable_search_analytics, :cache_embeddings,
                   :max_embedding_dimensions, :enable_document_summarization, :summary_model,
-                  :summary_max_length, :summary_min_content_length
+                  :summary_max_length, :summary_min_content_length, :enable_usage_tracking,
+                  :usage_ranking_enabled, :usage_recency_weight, :usage_frequency_weight,
+                  :usage_similarity_weight
 
     def initialize
       @llm_provider = :openai
@@ -26,6 +28,11 @@ module Ragdoll
       @summary_model = nil # Use default_model if nil
       @summary_max_length = 300
       @summary_min_content_length = 300
+      @enable_usage_tracking = true
+      @usage_ranking_enabled = true
+      @usage_recency_weight = 0.3
+      @usage_frequency_weight = 0.7
+      @usage_similarity_weight = 1.0
     end
 
     def openai_api_key

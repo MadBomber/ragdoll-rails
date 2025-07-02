@@ -266,52 +266,44 @@ module Ragdoll
     private
 
     def search_similar_content(embedding, limit:, threshold:, filters:)
-      # Build the base query with filters
-      embeddings_query = Ragdoll::Embedding.joins(:document)
+      # Use EmbeddingService for consistent search behavior with usage tracking
+      search_options = {
+        use_usage_ranking: Ragdoll.configuration.usage_ranking_enabled,
+        recency_weight: Ragdoll.configuration.usage_recency_weight,
+        frequency_weight: Ragdoll.configuration.usage_frequency_weight,
+        similarity_weight: Ragdoll.configuration.usage_similarity_weight
+      }
       
-      # Apply document filters
-      if filters[:document_type]
-        embeddings_query = embeddings_query.where(ragdoll_documents: { document_type: filters[:document_type] })
+      # For now, we'll use the embedding service for similarity search
+      # TODO: Integrate document filters into the embedding service search
+      results = @embedding_service.search_similar(
+        embedding,
+        limit: limit,
+        threshold: threshold,
+        options: search_options
+      )
+      
+      # Apply document-level filters post-search if needed
+      if filters.any?
+        results = apply_document_filters(results, filters)
       end
       
-      if filters[:document_status]
-        embeddings_query = embeddings_query.where(ragdoll_documents: { status: filters[:document_status] })
-      end
-      
-      if filters[:created_after]
-        embeddings_query = embeddings_query.where(ragdoll_documents: { created_at: filters[:created_after].. })
-      end
-
-      # Use pgvector for similarity search
-      sql = <<~SQL
-        SELECT e.*, d.title, d.location, d.document_type,
-               (e.embedding <=> $1::vector) AS distance,
-               (1 - (e.embedding <=> $1::vector)) AS similarity
-        FROM ragdoll_embeddings e
-        JOIN ragdoll_documents d ON d.id = e.document_id
-        WHERE (1 - (e.embedding <=> $1::vector)) >= $2
-        #{build_filter_conditions(filters)}
-        ORDER BY e.embedding <=> $1::vector
-        LIMIT $3
-      SQL
-
-      bind_values = [embedding.to_s, threshold, limit]
-      add_filter_bindings(filters, bind_values)
-
-      results = ActiveRecord::Base.connection.exec_query(sql, 'search_similar', bind_values)
-      
-      results.map do |row|
+      results.map do |result|
         {
-          embedding_id: row['id'],
-          document_id: row['document_id'],
-          document_title: row['title'],
-          document_location: row['location'],
-          document_type: row['document_type'],
-          content: row['content'],
-          similarity: row['similarity'].to_f,
-          distance: row['distance'].to_f,
-          chunk_index: row['chunk_index'],
-          metadata: JSON.parse(row['metadata'] || '{}')
+          embedding_id: result[:embedding_id],
+          document_id: result[:document_id],
+          document_title: result[:document_title],
+          document_location: result[:document_location],
+          document_type: result[:document_type] || get_document_type(result[:document_id]),
+          content: result[:content],
+          similarity: result[:similarity],
+          distance: result[:distance],
+          chunk_index: result[:chunk_index],
+          metadata: result[:metadata],
+          usage_count: result[:usage_count],
+          returned_at: result[:returned_at],
+          usage_score: result[:usage_score],
+          combined_score: result[:combined_score]
         }
       end
     end
@@ -469,6 +461,54 @@ module Ragdoll
       bind_values << filters[:document_type] if filters[:document_type]
       bind_values << filters[:document_status] if filters[:document_status]
       bind_values << filters[:created_after] if filters[:created_after]
+    end
+    
+    def apply_document_filters(results, filters)
+      return results if filters.empty?
+      
+      filtered_results = results.select do |result|
+        document_id = result[:document_id]
+        
+        # Fetch document if we need to check filters
+        if filters[:document_type] || filters[:document_status] || filters[:created_after]
+          document = get_document_by_id(document_id)
+          next false unless document
+          
+          # Apply filters
+          if filters[:document_type] && document[:document_type] != filters[:document_type]
+            next false
+          end
+          
+          if filters[:document_status] && document[:status] != filters[:document_status]
+            next false
+          end
+          
+          if filters[:created_after] && document[:created_at] < filters[:created_after]
+            next false
+          end
+        end
+        
+        true
+      end
+      
+      filtered_results
+    end
+    
+    def get_document_type(document_id)
+      doc = Ragdoll::Document.find_by(id: document_id)
+      doc&.document_type
+    end
+    
+    def get_document_by_id(document_id)
+      doc = Ragdoll::Document.find_by(id: document_id)
+      return nil unless doc
+      
+      {
+        id: doc.id,
+        document_type: doc.document_type,
+        status: doc.status,
+        created_at: doc.created_at
+      }
     end
   end
 end
