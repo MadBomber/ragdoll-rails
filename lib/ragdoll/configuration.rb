@@ -5,7 +5,8 @@ module Ragdoll
     attr_accessor :llm_provider, :llm_config, :embedding_model, :embedding_provider,
                   :chunk_size, :chunk_overlap, :search_similarity_threshold, :max_search_results,
                   :default_model, :prompt_template, :enable_search_analytics, :cache_embeddings,
-                  :max_embedding_dimensions
+                  :max_embedding_dimensions, :enable_document_summarization, :summary_model,
+                  :summary_max_length, :summary_min_content_length
 
     def initialize
       @llm_provider = :openai
@@ -21,6 +22,10 @@ module Ragdoll
       @enable_search_analytics = true
       @cache_embeddings = true
       @max_embedding_dimensions = 3072 # Support up to text-embedding-3-large
+      @enable_document_summarization = true
+      @summary_model = nil # Use default_model if nil
+      @summary_max_length = 300
+      @summary_min_content_length = 300
     end
 
     def openai_api_key

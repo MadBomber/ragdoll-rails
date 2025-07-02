@@ -370,7 +370,13 @@ module Ragdoll
         created_at: document.created_at,
         updated_at: document.updated_at,
         processing_started_at: document.processing_started_at,
-        processing_finished_at: document.processing_finished_at
+        processing_finished_at: document.processing_finished_at,
+        summary: document.summary,
+        summary_generated_at: document.summary_generated_at,
+        summary_model: document.summary_model,
+        summary_word_count: document.summary_word_count,
+        has_summary: document.has_summary?,
+        needs_summary: document.needs_summary?
       }
       
       response[:content] = document.content if include_content

@@ -68,5 +68,25 @@ FactoryBot.define do
     trait :large_content do
       content { "Large content. " * 1000 } # ~13KB content
     end
+
+    trait :with_summary do
+      summary { "This is a generated summary of the document content." }
+      summary_generated_at { 1.hour.ago }
+      summary_model { "gpt-4" }
+    end
+
+    trait :needs_summary do
+      summary { nil }
+      summary_generated_at { nil }
+      summary_model { nil }
+      content { "This is a document with enough content to warrant a summary. " * 50 }
+    end
+
+    trait :stale_summary do
+      summary { "This is an old summary that needs updating." }
+      summary_generated_at { 2.days.ago }
+      summary_model { "gpt-3.5-turbo" }
+      updated_at { 1.day.ago }
+    end
   end
 end

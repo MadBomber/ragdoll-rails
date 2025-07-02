@@ -3,6 +3,7 @@
 require_relative 'document_parser'
 require_relative 'text_chunker'
 require_relative 'embedding_service'
+require_relative 'summarization_service'
 
 module Ragdoll
   class ImportFileJob < ActiveJob::Base
@@ -110,6 +111,11 @@ module Ragdoll
     def process_document_content(document, content, metadata = {})
       return if content.blank?
 
+      # Generate document summary if enabled
+      if Ragdoll.configuration.enable_document_summarization
+        generate_document_summary(document, content)
+      end
+
       # Chunk the content
       chunks = TextChunker.chunk(
         content,
@@ -146,6 +152,27 @@ module Ragdoll
       end
 
       Rails.logger.info "Created #{chunks.length} embeddings for document #{document.id}"
+    end
+
+    def generate_document_summary(document, content)
+      return unless content.length >= Ragdoll.configuration.summary_min_content_length
+
+      begin
+        summarization_service = SummarizationService.new
+        summary = summarization_service.generate_document_summary(document)
+        
+        if summary.present?
+          document.update!(
+            summary: summary,
+            summary_generated_at: Time.current,
+            summary_model: Ragdoll.configuration.summary_model || Ragdoll.configuration.default_model
+          )
+          Rails.logger.info "Generated summary for document #{document.id} (#{summary.length} characters)"
+        end
+      rescue SummarizationService::SummarizationError => e
+        Rails.logger.warn "Failed to generate summary for document #{document.id}: #{e.message}"
+        # Don't fail the whole job if summary generation fails
+      end
     end
 
     def supported_file?(file_path)

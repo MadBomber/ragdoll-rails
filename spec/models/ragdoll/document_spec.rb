@@ -170,4 +170,239 @@ RSpec.describe Ragdoll::Document, type: :model do
       expect(document.processing_finished_at).to be_present
     end
   end
+
+  describe 'summary functionality' do
+    describe '#has_summary?' do
+      it 'returns true when document has summary' do
+        document = create(:ragdoll_document, :with_summary)
+        expect(document.has_summary?).to be true
+      end
+
+      it 'returns false when document has no summary' do
+        document = create(:ragdoll_document, summary: nil)
+        expect(document.has_summary?).to be false
+      end
+
+      it 'returns false when summary is blank' do
+        document = create(:ragdoll_document, summary: '')
+        expect(document.has_summary?).to be false
+      end
+    end
+
+    describe '#summary_stale?' do
+      it 'returns false when document has no summary' do
+        document = create(:ragdoll_document, summary: nil)
+        expect(document.summary_stale?).to be false
+      end
+
+      it 'returns true when summary_generated_at is nil' do
+        document = create(:ragdoll_document, summary: 'test', summary_generated_at: nil)
+        expect(document.summary_stale?).to be true
+      end
+
+      it 'returns true when document was updated after summary generation' do
+        document = create(:ragdoll_document, :stale_summary)
+        expect(document.summary_stale?).to be true
+      end
+
+      it 'returns false when summary is current' do
+        document = create(:ragdoll_document, :with_summary)
+        document.update_column(:updated_at, document.summary_generated_at - 1.hour)
+        expect(document.summary_stale?).to be false
+      end
+    end
+
+    describe '#needs_summary?' do
+      it 'returns false when document has no content' do
+        document = create(:ragdoll_document, content: nil)
+        expect(document.needs_summary?).to be false
+      end
+
+      it 'returns false when content is too short' do
+        short_content = 'a' * 100
+        document = create(:ragdoll_document, content: short_content)
+        expect(document.needs_summary?).to be false
+      end
+
+      it 'returns true when document has sufficient content but no summary' do
+        document = create(:ragdoll_document, :needs_summary)
+        expect(document.needs_summary?).to be true
+      end
+
+      it 'returns true when summary is stale' do
+        document = create(:ragdoll_document, :stale_summary)
+        expect(document.needs_summary?).to be true
+      end
+
+      it 'returns false when document has current summary' do
+        document = create(:ragdoll_document, :with_summary)
+        document.update_column(:updated_at, document.summary_generated_at - 1.hour)
+        expect(document.needs_summary?).to be false
+      end
+    end
+
+    describe '#summary_word_count' do
+      it 'returns 0 for documents without summary' do
+        document = create(:ragdoll_document, summary: nil)
+        expect(document.summary_word_count).to eq(0)
+      end
+
+      it 'counts words in summary' do
+        summary = 'This is a test summary with ten words total'
+        document = create(:ragdoll_document, summary: summary)
+        expect(document.summary_word_count).to eq(10)
+      end
+    end
+
+    describe '#regenerate_summary!' do
+      let(:document) { create(:ragdoll_document, content: 'Content ' * 100) }
+      let(:mock_service) { instance_double(Ragdoll::SummarizationService) }
+
+      before do
+        allow(Ragdoll::SummarizationService).to receive(:new).and_return(mock_service)
+      end
+
+      it 'regenerates summary successfully' do
+        new_summary = 'New generated summary'
+        allow(mock_service).to receive(:generate_document_summary).and_return(new_summary)
+
+        result = document.regenerate_summary!
+
+        expect(result).to be true
+        expect(document.reload.summary).to eq(new_summary)
+        expect(document.summary_generated_at).to be_within(1.second).of(Time.current)
+        expect(document.summary_model).to eq('gpt-4')
+      end
+
+      it 'returns false when summary generation fails' do
+        allow(mock_service).to receive(:generate_document_summary).and_return(nil)
+
+        result = document.regenerate_summary!
+
+        expect(result).to be false
+        expect(document.reload.summary).to be_nil
+      end
+
+      it 'returns false for documents without content' do
+        document.update!(content: nil)
+
+        result = document.regenerate_summary!
+
+        expect(result).to be false
+        expect(mock_service).not_to have_received(:generate_document_summary)
+      end
+    end
+  end
+
+  describe 'status helper methods' do
+    it 'provides status check methods' do
+      completed_doc = create(:ragdoll_document, :completed)
+      failed_doc = create(:ragdoll_document, :failed)
+      processing_doc = create(:ragdoll_document, :processing)
+      pending_doc = create(:ragdoll_document, status: 'pending')
+
+      expect(completed_doc.completed?).to be true
+      expect(completed_doc.failed?).to be false
+      expect(completed_doc.processing?).to be false
+      expect(completed_doc.pending?).to be false
+
+      expect(failed_doc.failed?).to be true
+      expect(processing_doc.processing?).to be true
+      expect(pending_doc.pending?).to be true
+    end
+  end
+
+  describe 'content helper methods' do
+    let(:document) { create(:ragdoll_document, content: 'This is test content with several words.') }
+
+    describe '#word_count' do
+      it 'counts words in content' do
+        expect(document.word_count).to eq(8)
+      end
+
+      it 'returns 0 for documents without content' do
+        document.update!(content: nil)
+        expect(document.word_count).to eq(0)
+      end
+    end
+
+    describe '#character_count' do
+      it 'counts characters in content' do
+        expect(document.character_count).to eq(document.content.length)
+      end
+
+      it 'returns 0 for documents without content' do
+        document.update!(content: nil)
+        expect(document.character_count).to eq(0)
+      end
+    end
+
+    describe '#processing_duration' do
+      it 'calculates processing duration' do
+        start_time = 2.hours.ago
+        end_time = 1.hour.ago
+        document.update!(
+          processing_started_at: start_time,
+          processing_finished_at: end_time
+        )
+
+        duration = document.processing_duration
+        expect(duration).to be_within(1.second).of(1.hour)
+      end
+
+      it 'returns nil when processing times are missing' do
+        expect(document.processing_duration).to be_nil
+      end
+    end
+  end
+
+  describe 'scope methods' do
+    let!(:doc_with_summary) { create(:ragdoll_document, :with_summary) }
+    let!(:doc_needs_summary) { create(:ragdoll_document, :needs_summary, status: 'completed') }
+    let!(:completed_doc) { create(:ragdoll_document, :completed) }
+
+    describe '.with_summaries' do
+      it 'returns documents that have summaries' do
+        expect(described_class.with_summaries).to contain_exactly(doc_with_summary)
+      end
+    end
+
+    describe '.needs_summary' do
+      it 'returns completed documents without summaries' do
+        expect(described_class.needs_summary).to contain_exactly(doc_needs_summary)
+      end
+    end
+
+    describe '.by_type' do
+      it 'filters documents by type' do
+        pdf_doc = create(:ragdoll_document, :pdf)
+        expect(described_class.by_type('pdf')).to contain_exactly(pdf_doc)
+      end
+    end
+  end
+
+  describe 'search data' do
+    let(:document) do
+      create(:ragdoll_document,
+        title: 'Test Document',
+        summary: 'Document summary',
+        content: 'Document content',
+        metadata: { 'name' => 'metadata name', 'summary' => 'metadata summary' }
+      )
+    end
+
+    it 'includes all searchable fields' do
+      search_data = document.search_data
+
+      expect(search_data).to include(
+        title: 'Test Document',
+        summary: 'Document summary',
+        content: 'Document content',
+        metadata_name: 'metadata name',
+        metadata_summary: 'metadata summary',
+        document_type: document.document_type,
+        status: document.status
+      )
+    end
+  end
 end
