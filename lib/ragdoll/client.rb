@@ -110,13 +110,18 @@ module Ragdoll
 
     # Search similar content (for shared examples)
     def search_similar_content(query_or_embedding, **options)
+      # Set defaults for required parameters
+      limit = options[:limit] || Ragdoll.configuration&.max_search_results || 10
+      threshold = options[:threshold] || Ragdoll.configuration&.search_similarity_threshold || 0.7
+      filters = options[:filters] || {}
+      
       if query_or_embedding.is_a?(Array)
         # It's an embedding
-        @api.search_similar_content(query_or_embedding, **options)
+        @api.search_similar_content(query_or_embedding, limit: limit, threshold: threshold, filters: filters)
       else
         # It's a query string, generate embedding first
         query_embedding = @api.instance_variable_get(:@embedding_service).generate_embedding(query_or_embedding)
-        @api.search_similar_content(query_embedding, **options)
+        @api.search_similar_content(query_embedding, limit: limit, threshold: threshold, filters: filters)
       end
     end
 

@@ -263,8 +263,6 @@ module Ragdoll
       end
     end
 
-    private
-
     def search_similar_content(embedding, limit:, threshold:, filters:)
       # Use EmbeddingService for consistent search behavior with usage tracking
       search_options = {
@@ -278,9 +276,9 @@ module Ragdoll
       # TODO: Integrate document filters into the embedding service search
       results = @embedding_service.search_similar(
         embedding,
+        search_options,
         limit: limit,
-        threshold: threshold,
-        options: search_options
+        threshold: threshold
       )
       
       # Apply document-level filters post-search if needed
@@ -307,6 +305,8 @@ module Ragdoll
         }
       end
     end
+
+    private
 
     def format_context_results(results, prompt)
       {

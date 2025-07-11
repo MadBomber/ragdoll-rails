@@ -17,6 +17,11 @@ module Ragdoll
 
     def chunk
       return [] if @text.empty?
+      
+      # Ensure chunk_size and chunk_overlap are valid integers
+      @chunk_size = (@chunk_size || DEFAULT_CHUNK_SIZE).to_i
+      @chunk_overlap = (@chunk_overlap || DEFAULT_CHUNK_OVERLAP).to_i
+      
       return [@text] if @text.length <= @chunk_size
 
       chunks = []
