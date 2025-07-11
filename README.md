@@ -10,6 +10,8 @@
 
 **Ragdoll** is a powerful Rails engine that adds **Retrieval Augmented Generation (RAG)** capabilities to any Rails application. It provides semantic search, document ingestion, and context-enhanced AI prompts using vector embeddings and PostgreSQL with pgvector. With support for multiple LLM providers through ruby_llm, you can use OpenAI, Anthropic, Google, Azure, Ollama, and more.
 
+[Demo Rails App](https://github.com/madbomber/ragdoll_demo_app)
+
 ## ✨ Features
 
 - 🔍 **Semantic Search** - Vector similarity search with flexible embedding models and pgvector
@@ -55,14 +57,14 @@ Ragdoll.configure do |config|
   # LLM Provider Configuration
   config.llm_provider = :openai  # or :anthropic, :google, :azure, :ollama, :huggingface
   config.embedding_provider = :openai  # optional, defaults to llm_provider
-  
+
   # Provider-specific API keys
   config.llm_config = {
     openai: { api_key: ENV['OPENAI_API_KEY'] },
     anthropic: { api_key: ENV['ANTHROPIC_API_KEY'] },
     google: { api_key: ENV['GOOGLE_API_KEY'], project_id: ENV['GOOGLE_PROJECT_ID'] }
   }
-  
+
   # Embedding and processing settings
   config.embedding_model = 'text-embedding-3-small'
   config.chunk_size = 1000
@@ -268,10 +270,10 @@ rake ragdoll:document:show[123]
 Ragdoll.configure do |config|
   # Primary LLM provider for chat/completion
   config.llm_provider = :anthropic
-  
+
   # Separate provider for embeddings (optional)
   config.embedding_provider = :openai
-  
+
   # Provider-specific configurations
   config.llm_config = {
     openai: {
