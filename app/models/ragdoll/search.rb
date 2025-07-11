@@ -4,6 +4,11 @@ module Ragdoll
   class Search < ApplicationRecord
     self.table_name = 'ragdoll_searches'
 
+    # Override dangerous attribute to allow access to model_name column
+    def self.dangerous_attribute_method?(name)
+      name.to_s == 'model_name' ? false : super
+    end
+
     # Validations
     validates :query, presence: true, length: { minimum: 1, maximum: 10000 }
     validates :search_type, presence: true, inclusion: { in: %w[semantic keyword hybrid] }

@@ -6,8 +6,9 @@ require_relative 'embedding_service'
 require_relative 'summarization_service'
 
 module Ragdoll
-  class ImportFileJob < ActiveJob::Base
-    def perform(document_id_or_path)
+  if defined?(ActiveJob)
+    class ImportFileJob < ActiveJob::Base
+      def perform(document_id_or_path)
       if document_id_or_path.is_a?(Integer) || document_id_or_path.to_s.match?(/^\d+$/)
         process_existing_document(document_id_or_path.to_i)
       else
@@ -184,6 +185,20 @@ module Ragdoll
       else
         Rails.logger.warn "Unsupported file type: #{extension} for file #{file_path}"
         false
+      end
+    end
+    end
+  else
+    # Stub class when ActiveJob is not available
+    class ImportFileJob
+      def self.perform_later(*args)
+        # Stub method for testing
+        new.perform(*args)
+      end
+      
+      def perform(document_id_or_path)
+        # Stub method for testing
+        { status: 'stubbed', input: document_id_or_path }
       end
     end
   end

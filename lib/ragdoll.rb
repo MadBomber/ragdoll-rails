@@ -17,3 +17,27 @@ require "ragdoll/embedding_service"
 require "ragdoll/document_type_detector"
 require "ragdoll/api"
 require "ragdoll/client"
+require "ragdoll/ingestion"
+require "ragdoll/summarization_service"
+require "ragdoll/import_file_job"
+
+# Load models if we're in a Rails context
+if defined?(Rails) && defined?(ActiveRecord)
+  # Ensure ApplicationRecord is available for our models
+  unless defined?(ApplicationRecord)
+    # Create a minimal ApplicationRecord for engine testing
+    class ApplicationRecord < ActiveRecord::Base
+      self.abstract_class = true
+    end
+  end
+  
+  # Require the models so they're available for testing
+  begin
+    require File.expand_path('../app/models/ragdoll/document', __dir__)
+    require File.expand_path('../app/models/ragdoll/embedding', __dir__)
+    require File.expand_path('../app/models/ragdoll/search', __dir__)
+  rescue LoadError => e
+    # Models couldn't be loaded, continue without them
+    puts "Warning: Could not load Ragdoll models: #{e.message}"
+  end
+end

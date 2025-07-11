@@ -53,7 +53,9 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rubyzip", "~> 2.0"
 
   # Development dependencies
-  spec.add_development_dependency "rspec-rails", "~> 6.0"
+  spec.add_development_dependency "rspec-core", "~> 3.12"
+  spec.add_development_dependency "rspec-expectations", "~> 3.12"
+  spec.add_development_dependency "rspec-mocks", "~> 3.12"
   spec.add_development_dependency "factory_bot_rails", "~> 6.0"
   spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
 end

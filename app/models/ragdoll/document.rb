@@ -8,7 +8,7 @@ module Ragdoll
     
     # Associations
     has_many :ragdoll_embeddings, class_name: 'Ragdoll::Embedding', foreign_key: 'document_id', dependent: :destroy
-    has_one_attached :file
+    has_one_attached :file if respond_to?(:has_one_attached)
     
     # Validations
     validates :location, presence: true, uniqueness: true
@@ -26,9 +26,11 @@ module Ragdoll
     scope :needs_summary, -> { where(summary: nil).completed }
     
     # Search configuration
-    searchkick text_middle: [:title, :summary, :content, :metadata_name, :metadata_summary]
+    searchkick text_middle: [:title, :summary, :content, :metadata_name, :metadata_summary] if defined?(Searchkick)
 
     def search_data
+      return {} unless defined?(Searchkick)
+      
       {
         title: title,
         summary: summary,

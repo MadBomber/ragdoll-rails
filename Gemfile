@@ -8,7 +8,6 @@ gem "activerecord"  # Object-relational mapper framework (part of Rails).
 gem "activejob"     # Framework for declaring jobs and making them run on a variety of queuing backends
 gem "amazing_print" # Pretty print Ruby objects with proper indentation and colors
 gem "debug_me"      # A tool to print the labeled value of variables.
-gem "factory_bot_rails"  # factory_bot_rails provides integration between factory_bot and rails 5.0 or newer
 gem "hashie"        # Your friendly neighborhood hash library.
 gem "neighbor"      # Nearest neighbor search for Rails
 gem "pg"            # Pg is the Ruby interface to the PostgreSQL RDBMS
@@ -23,3 +22,7 @@ end
 gem "solid_queue"   # Database-backed Active Job backend.
 gem "searchkick"    # Elasticsearch-backed search for Rails
 gem "thor"          # A scripting framework that replaces rake, sake and rubigen
+
+group :development do
+  gem 'claude-on-rails'
+end
