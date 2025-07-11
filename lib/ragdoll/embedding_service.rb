@@ -104,7 +104,7 @@ module Ragdoll
     end
 
     # Search for similar embeddings using cosine similarity with usage-based ranking
-    def search_similar(query_embedding, limit: 10, threshold: nil, model_name: nil, options = {})
+    def search_similar(query_embedding, options = {}, limit: 10, threshold: nil, model_name: nil)
       threshold ||= Ragdoll.configuration.search_similarity_threshold
       model_name ||= Ragdoll.configuration.embedding_model
       query_dimensions = query_embedding.length
