@@ -1,28 +1,20 @@
-# madbomber/ragdoll/Gemfile
+# madbomber/ragdoll-rails/Gemfile
 
 source "https://rubygems.org"
 
-gemspec
+gemspec name: "ragdoll-rails"
 
-gem "activerecord"  # Object-relational mapper framework (part of Rails).
-gem "activejob"     # Framework for declaring jobs and making them run on a variety of queuing backends
+# Local development dependency on ragdoll-core
+gem "ragdoll-core", path: "../ragdoll-core"
+
+# Additional development/test gems not in gemspec
 gem "amazing_print" # Pretty print Ruby objects with proper indentation and colors
 gem "debug_me"      # A tool to print the labeled value of variables.
-gem "hashie"        # Your friendly neighborhood hash library.
 gem "neighbor"      # Nearest neighbor search for Rails
-gem "pg"            # Pg is the Ruby interface to the PostgreSQL RDBMS
-gem "pgvector"      # pgvector support for Ruby
-gem "rake"          # Rake is a Make-like program implemented in Ruby
-gem "rspec"         # rspec-3.13.0
+gem "solid_queue"   # Database-backed Active Job backend.
+gem "searchkick"    # Elasticsearch-backed search for Rails
 
 group :development do
   gem "annotate"    # Annotate models, routes, fixtures, and others based on the database schema
-end
-
-gem "solid_queue"   # Database-backed Active Job backend.
-gem "searchkick"    # Elasticsearch-backed search for Rails
-gem "thor"          # A scripting framework that replaces rake, sake and rubigen
-
-group :development do
   gem 'claude-on-rails'
 end
