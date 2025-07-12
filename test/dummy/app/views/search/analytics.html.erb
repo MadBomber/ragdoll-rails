@@ -1,0 +1,298 @@
+<% content_for :title, "Search Analytics - Ragdoll Engine Demo" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-chart-line"></i> Search Analytics</h1>
+      <%= link_to "Back to Search", search_path, class: "btn btn-outline-secondary" %>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-primary">
+      <div class="card-body text-center">
+        <h5 class="card-title text-primary">
+          <i class="fas fa-search"></i> Total Searches
+        </h5>
+        <h2 class="text-primary"><%= @search_stats[:total_searches] %></h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-success">
+      <div class="card-body text-center">
+        <h5 class="card-title text-success">
+          <i class="fas fa-question-circle"></i> Unique Queries
+        </h5>
+        <h2 class="text-success"><%= @search_stats[:unique_queries] %></h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-info">
+      <div class="card-body text-center">
+        <h5 class="card-title text-info">
+          <i class="fas fa-calendar-week"></i> This Week
+        </h5>
+        <h2 class="text-info"><%= @search_stats[:searches_this_week] %></h2>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-warning">
+      <div class="card-body text-center">
+        <h5 class="card-title text-warning">
+          <i class="fas fa-bullseye"></i> Avg Similarity
+        </h5>
+        <h2 class="text-warning"><%= @search_stats[:average_similarity] %></h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-star"></i> Top Queries</h5>
+      </div>
+      <div class="card-body">
+        <% if @top_queries.any? %>
+          <div class="query-list" style="max-height: 400px; overflow-y: auto;">
+            <% @top_queries.each_with_index do |(query, count), index| %>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <span class="badge bg-primary me-2"><%= index + 1 %></span>
+                  <strong><%= query %></strong>
+                </div>
+                <span class="badge bg-success"><%= count %> searches</span>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No search queries recorded yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-chart-area"></i> Search Trends</h5>
+      </div>
+      <div class="card-body">
+        <% if @search_trends.any? %>
+          <canvas id="searchTrendsChart" width="400" height="200"></canvas>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="fas fa-chart-area fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No search trend data available yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-file-alt"></i> Most Searched Documents</h5>
+      </div>
+      <div class="card-body">
+        <% if @top_documents.any? %>
+          <div class="document-list" style="max-height: 400px; overflow-y: auto;">
+            <% @top_documents.each_with_index do |(document_title, count), index| %>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <span class="badge bg-secondary me-2"><%= index + 1 %></span>
+                  <%= truncate(document_title, length: 50) %>
+                </div>
+                <span class="badge bg-info"><%= count %> hits</span>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No document search data available yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-bullseye"></i> Similarity Distribution</h5>
+      </div>
+      <div class="card-body">
+        <% if @similarity_distribution.any? %>
+          <canvas id="similarityDistributionChart" width="400" height="200"></canvas>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="fas fa-bullseye fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No similarity distribution data available yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-table"></i> Detailed Search Statistics</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4">
+            <h6>Search Volume</h6>
+            <table class="table table-sm">
+              <tbody>
+                <tr>
+                  <td>Total Searches:</td>
+                  <td><strong><%= @search_stats[:total_searches] %></strong></td>
+                </tr>
+                <tr>
+                  <td>Unique Queries:</td>
+                  <td><strong><%= @search_stats[:unique_queries] %></strong></td>
+                </tr>
+                <tr>
+                  <td>Today:</td>
+                  <td><strong><%= @search_stats[:searches_today] %></strong></td>
+                </tr>
+                <tr>
+                  <td>This Week:</td>
+                  <td><strong><%= @search_stats[:searches_this_week] %></strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="col-md-4">
+            <h6>Search Quality</h6>
+            <table class="table table-sm">
+              <tbody>
+                <tr>
+                  <td>Average Similarity:</td>
+                  <td><strong><%= @search_stats[:average_similarity] %></strong></td>
+                </tr>
+                <tr>
+                  <td>High Quality (>0.8):</td>
+                  <td><strong><%= @similarity_distribution.select { |k, v| k > 0.8 }.sum { |k, v| v } %></strong></td>
+                </tr>
+                <tr>
+                  <td>Medium Quality (0.6-0.8):</td>
+                  <td><strong><%= @similarity_distribution.select { |k, v| k >= 0.6 && k <= 0.8 }.sum { |k, v| v } %></strong></td>
+                </tr>
+                <tr>
+                  <td>Low Quality (<0.6):</td>
+                  <td><strong><%= @similarity_distribution.select { |k, v| k < 0.6 }.sum { |k, v| v } %></strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="col-md-4">
+            <h6>Popular Content</h6>
+            <table class="table table-sm">
+              <tbody>
+                <tr>
+                  <td>Most Searched Doc:</td>
+                  <td><strong><%= @top_documents.first&.first ? truncate(@top_documents.first.first, length: 20) : "None" %></strong></td>
+                </tr>
+                <tr>
+                  <td>Most Popular Query:</td>
+                  <td><strong><%= @top_queries.first&.first ? truncate(@top_queries.first.first, length: 20) : "None" %></strong></td>
+                </tr>
+                <tr>
+                  <td>Documents Searched:</td>
+                  <td><strong><%= @top_documents.count %></strong></td>
+                </tr>
+                <tr>
+                  <td>Query Variety:</td>
+                  <td><strong><%= @top_queries.count %></strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @search_trends.any? %>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Search Trends Chart
+  const trendsCtx = document.getElementById('searchTrendsChart').getContext('2d');
+  const searchTrendsChart = new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+      labels: <%= @search_trends.keys.map(&:to_s).to_json.html_safe %>,
+      datasets: [{
+        label: 'Daily Searches',
+        data: <%= @search_trends.values.to_json.html_safe %>,
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  <% if @similarity_distribution.any? %>
+  // Similarity Distribution Chart
+  const similarityCtx = document.getElementById('similarityDistributionChart').getContext('2d');
+  const similarityChart = new Chart(similarityCtx, {
+    type: 'bar',
+    data: {
+      labels: <%= @similarity_distribution.keys.map(&:to_s).to_json.html_safe %>,
+      datasets: [{
+        label: 'Number of Searches',
+        data: <%= @similarity_distribution.values.to_json.html_safe %>,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Similarity Score'
+          }
+        }
+      }
+    }
+  });
+  <% end %>
+});
+</script>
+<% end %>

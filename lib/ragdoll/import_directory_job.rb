@@ -3,7 +3,7 @@
 # frozen_string_literal: true
 
 module Ragdoll
-  class ImportDirectoryJob < ActiveJob::Base
+  class ImportDirectoryJob < ::ActiveJob::Base
     def perform(directory, recursive: false)
       job_manager = Ragdoll::ImportJobManager.new(batch_size: 10)
 

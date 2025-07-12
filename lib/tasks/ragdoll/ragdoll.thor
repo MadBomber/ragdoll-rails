@@ -1,13 +1,14 @@
 
 # lib/tasks/ragdoll.thor
 
-require_relative '../../ragdoll/generator'
+require 'ragdoll/generator'
 
 module Ragdoll
   class Ragdoll < Thor
     desc "generate NAME", "Generates a cat template"
     def generate(name)
-      say Ragdoll::Generator.create_template(name)
+      # Use top-level Ragdoll::Generator
+      say ::Ragdoll::Generator.create_template(name)
     end
   end
 end

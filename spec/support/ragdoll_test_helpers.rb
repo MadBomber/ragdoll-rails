@@ -56,18 +56,20 @@ module RagdollTestHelpers
   end
 
   def stub_ruby_llm_embeddings
-    allow_any_instance_of(RubyLLM::Client).to receive(:embed) do |client, params|
-      input = params[:input]
-      if input.is_a?(Array)
-        {
-          'data' => input.map.with_index do |text, index|
-            {
-              'embedding' => Array.new(1536) { |i| (text.sum + index + i) / 1000000.0 }
-            }
-          end
-        }
-      else
-        mock_ruby_llm_embedding_response(input)
+    if defined?(RubyLLM::Client)
+      allow_any_instance_of(RubyLLM::Client).to receive(:embed) do |client, params|
+        input = params[:input]
+        if input.is_a?(Array)
+          {
+            'data' => input.map.with_index do |text, index|
+              {
+                'embedding' => Array.new(1536) { |i| (text.sum + index + i) / 1000000.0 }
+              }
+            end
+          }
+        else
+          mock_ruby_llm_embedding_response(input)
+        end
       end
     end
   end
@@ -125,13 +127,18 @@ module RagdollTestHelpers
 
   # Error simulation helpers
   def simulate_ruby_llm_error
-    allow_any_instance_of(RubyLLM::Client).to receive(:embed)
-      .and_raise(RubyLLM::Error.new("API Error"))
+    if defined?(RubyLLM::Client)
+      allow_any_instance_of(RubyLLM::Client).to receive(:embed)
+        .and_raise(RubyLLM::Error.new("API Error"))
+    end
   end
 
   def simulate_openai_error
     simulate_ruby_llm_error
   end
+  
+  # Alias for backwards compatibility
+  alias_method :stub_openai_embeddings, :stub_ruby_llm_embeddings
 
   def simulate_parse_error
     allow(File).to receive(:read).and_raise(StandardError.new("Parse error"))

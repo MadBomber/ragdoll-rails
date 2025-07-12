@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+# CLI entrypoint for Ragdoll Thor-based commands
+
+require 'rubygems'
+require 'thor'
+require 'pathname'
+
+# Add lib directory to load path for local development
+lib_path = File.expand_path('../lib', __dir__)
+$LOAD_PATH.unshift(lib_path) unless $LOAD_PATH.include?(lib_path)
+
+# Load all Thor task files
+thor_tasks_dir = File.expand_path('../lib/tasks/ragdoll', __dir__)
+Dir.glob("#{thor_tasks_dir}/*.thor").each { |file| load file }
+
+# Main CLI class that aggregates all Thor subcommands
+class RagdollCLI < Thor
+  desc 'generate NAME', 'Generate a simple template'
+  def generate(name)
+    begin
+      require_relative '../lib/ragdoll'
+      puts Ragdoll::Generator.create_template(name)
+    rescue LoadError => e
+      puts "Error: Could not load Ragdoll library. #{e.message}"
+      puts "Make sure you're running from a Rails application or have the ragdoll gem installed."
+      exit 1
+    end
+  end
+
+  # Register subcommands from Thor task modules
+  begin
+    register(Ragdoll::Document, 'document', 'document COMMAND', 'Document management commands')
+    register(Ragdoll::Import, 'import', 'import PATH', 'Import documents from a file, glob, or directory')
+    register(Ragdoll::SearchCLI, 'search', 'search PROMPT', 'Search the database with a prompt') 
+    register(Ragdoll::Jobs, 'jobs', 'jobs [JOB_ID]', 'Report the status of all running and queued import jobs')
+  rescue NameError => e
+    puts "Warning: Some subcommands may not be available: #{e.message}"
+  end
+end
+
+# Launch the CLI
+RagdollCLI.start(ARGV)

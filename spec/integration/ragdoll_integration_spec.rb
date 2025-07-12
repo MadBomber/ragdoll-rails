@@ -104,7 +104,7 @@ RSpec.describe 'Ragdoll Integration', type: :integration do
         )
 
         expect(context[:total_chunks]).to be > 0
-        expect(context[:combined_context]).to include("Rails") || expect(context[:combined_context]).to include("Docker")
+        expect(context[:combined_context]).to include("Rails").or include("Docker")
 
         # Test search across file types
         search_results = Ragdoll.search("application development")

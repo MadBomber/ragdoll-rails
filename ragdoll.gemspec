@@ -26,8 +26,16 @@ Gem::Specification.new do |spec|
   # The `git ls-files -z` loads the files in the RubyGem that have been
   # added into git.
   gemspec = File.basename(__FILE__)
-  spec.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md", "Thorfile"]
+  spec.files = Dir[
+    "{app,config,db,lib}/**/*",
+    "bin/*",
+    "MIT-LICENSE",
+    "Rakefile",
+    "README.md",
+    "Thorfile"
+  ]
   spec.bindir        = "bin"
+  spec.executables   = ["ragdoll"]
   spec.require_paths = ["lib"]
 
   # Core Rails engine dependency
@@ -44,6 +52,8 @@ Gem::Specification.new do |spec|
   # Background job processing
   spec.add_dependency "sidekiq", "~> 7.0"
 
+  # Command-line interface
+  spec.add_dependency "thor", "~> 1.3"
   # Text processing and LLM integration
   spec.add_dependency "ruby_llm", "~> 1.3"
 

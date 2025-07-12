@@ -3,7 +3,7 @@
 # frozen_string_literal: true
 
 module Ragdoll
-  class ImportJob < ActiveJob::Base
+  class ImportJob < ::ActiveJob::Base
     def perform(file)
       document = File.read(file)
       ingestion = Ragdoll::Ingestion.new(document)

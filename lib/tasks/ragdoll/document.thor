@@ -247,10 +247,12 @@ module Ragdoll
 
     def require_environment!
       unless defined?(Rails) && Rails.application
-        require File.expand_path('config/environment', Dir.pwd)
-      rescue LoadError
-        say "Error: Rails environment not found. Run this command from a Rails application root.", :red
-        exit 1
+        begin
+          require File.expand_path('config/environment', Dir.pwd)
+        rescue LoadError
+          say "Error: Rails environment not found. Run this command from a Rails application root.", :red
+          exit 1
+        end
       end
     end
 

@@ -1,0 +1,253 @@
+<% content_for :title, "Documents - Ragdoll Engine Demo" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-file-alt"></i> Documents</h1>
+      <%= link_to "Add Document", new_document_path, class: "btn btn-primary" %>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-filter"></i> Filters</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: documents_path, method: :get, local: true, class: "row g-3" do |form| %>
+          <div class="col-md-3">
+            <%= form.text_field :search, placeholder: "Search documents...", value: params[:search], class: "form-control" %>
+          </div>
+          <div class="col-md-3">
+            <%= form.select :document_type, options_for_select([["All Types", ""]] + @document_types.map { |type| [type.titleize, type] }, params[:document_type]), {}, { class: "form-select" } %>
+          </div>
+          <div class="col-md-3">
+            <%= form.select :status, options_for_select([["All Statuses", ""]] + @statuses.map { |status| [status.titleize, status] }, params[:status]), {}, { class: "form-select" } %>
+          </div>
+          <div class="col-md-3">
+            <%= form.submit "Filter", class: "btn btn-outline-primary" %>
+            <%= link_to "Clear", documents_path, class: "btn btn-outline-secondary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @documents.any? %>
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5><i class="fas fa-list"></i> Document List</h5>
+          <div>
+            <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
+              <i class="fas fa-trash"></i> Delete Selected
+            </button>
+            <button class="btn btn-outline-warning btn-sm" onclick="bulkReprocess()">
+              <i class="fas fa-sync"></i> Reprocess Selected
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="select-all" onclick="toggleAll()">
+                  </th>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Embeddings</th>
+                  <th>Size</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @documents.each do |document| %>
+                  <tr>
+                    <td>
+                      <input type="checkbox" name="document_ids[]" value="<%= document.id %>" class="document-checkbox">
+                    </td>
+                    <td>
+                      <%= link_to document.title, document_path(document), class: "text-decoration-none" %>
+                    </td>
+                    <td>
+                      <span class="badge bg-secondary"><%= document.document_type&.upcase %></span>
+                    </td>
+                    <td>
+                      <span class="badge bg-<%= document.status == 'processed' ? 'success' : document.status == 'failed' ? 'danger' : 'warning' %>">
+                        <%= document.status %>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge bg-info"><%= document.ragdoll_embeddings.count %></span>
+                    </td>
+                    <td>
+                      <% if document.character_count > 0 %>
+                        <%= pluralize(document.character_count, 'character') %>
+                      <% else %>
+                        <span class="text-muted">-</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <small class="text-muted"><%= time_ago_in_words(document.created_at) %> ago</small>
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm">
+                        <%= link_to document_path(document), class: "btn btn-outline-primary btn-sm", data: { bs_toggle: "tooltip", bs_placement: "top" }, title: "View document details" do %>
+                          <i class="fas fa-eye"></i>
+                        <% end %>
+                        <%= link_to preview_document_path(document), class: "btn btn-outline-info btn-sm", data: { bs_toggle: "tooltip", bs_placement: "top" }, title: "Preview document content", target: "_blank" do %>
+                          <i class="fas fa-search"></i>
+                        <% end %>
+                        <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Reprocess document embeddings" onclick="reprocessDocument(<%= document.id %>)">
+                          <i class="fas fa-sync"></i>
+                        </button>
+                        <%= link_to edit_document_path(document), class: "btn btn-outline-secondary btn-sm", data: { bs_toggle: "tooltip", bs_placement: "top" }, title: "Edit document details" do %>
+                          <i class="fas fa-edit"></i>
+                        <% end %>
+                        <%= link_to document_path(document), method: :delete, class: "btn btn-outline-danger btn-sm", data: { bs_toggle: "tooltip", bs_placement: "top", confirm: "Are you sure you want to delete this document?" }, title: "Delete document permanently" do %>
+                          <i class="fas fa-trash"></i>
+                        <% end %>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% else %>
+  <div class="row">
+    <div class="col-12">
+      <div class="text-center py-5">
+        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+        <h4>No documents found</h4>
+        <p class="text-muted">Get started by adding your first document to the system.</p>
+        <%= link_to "Add Document", new_document_path, class: "btn btn-primary" %>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<script>
+function toggleAll() {
+  const selectAll = document.getElementById('select-all');
+  const checkboxes = document.querySelectorAll('.document-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAll.checked;
+  });
+}
+
+function reprocessDocument(documentId) {
+  if (confirm('Are you sure you want to reprocess this document?')) {
+    // Create a form with proper CSRF token for individual reprocess action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/documents/${documentId}/reprocess`;
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function bulkDelete() {
+  const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one document to delete.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete ${checkedBoxes.length} selected documents?`)) {
+    // Create a new form with proper CSRF token for delete action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<%= bulk_delete_documents_path %>';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add selected document IDs
+    checkedBoxes.forEach(checkbox => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'document_ids[]';
+      input.value = checkbox.value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function bulkReprocess() {
+  const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one document to reprocess.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to reprocess ${checkedBoxes.length} selected documents?`)) {
+    // Create a new form with proper CSRF token for reprocess action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<%= bulk_reprocess_documents_path %>';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add selected document IDs
+    checkedBoxes.forEach(checkbox => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'document_ids[]';
+      input.value = checkbox.value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function () {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl, {
+      delay: { "show": 500, "hide": 100 },
+      placement: 'top',
+      boundary: 'viewport',
+      fallbackPlacements: ['top', 'bottom']
+    });
+  });
+});
+</script>

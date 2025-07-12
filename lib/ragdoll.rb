@@ -19,7 +19,17 @@ require "ragdoll/api"
 require "ragdoll/client"
 require "ragdoll/ingestion"
 require "ragdoll/summarization_service"
-require "ragdoll/import_file_job"
+# Only load Rails-dependent components when in a Rails environment
+if defined?(Rails) && defined?(ActiveJob)
+  require "ragdoll/import_file_job"
+else
+  # Stub ActiveJob::Base when not in a Rails environment
+  unless defined?(ActiveJob)
+    module ActiveJob
+      class Base; end
+    end
+  end
+end
 
 # Load models if we're in a Rails context
 if defined?(Rails) && defined?(ActiveRecord)

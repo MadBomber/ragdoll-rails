@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Ragdoll
-  class ImportFileJob < ActiveJob::Base
+  class ImportFileJob < ::ActiveJob::Base
     queue_as :default
 
     def perform(document_id)

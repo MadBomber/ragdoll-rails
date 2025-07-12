@@ -2,7 +2,7 @@ require 'rails_helper'
 
 RSpec.describe Ragdoll do
   before do
-    stub_openai_embeddings
+    stub_openai_embeddings if respond_to?(:stub_openai_embeddings)
   end
 
   describe 'module structure' do
@@ -46,6 +46,7 @@ RSpec.describe Ragdoll do
 
     before do
       allow(Ragdoll).to receive(:client).and_return(mock_client)
+      allow(mock_client).to receive(:search_similar_content).and_return([])
     end
 
     describe '.enhance_prompt' do
@@ -78,6 +79,7 @@ RSpec.describe Ragdoll do
         
         before do
           allow(Ragdoll).to receive(:search).and_call_original
+          allow(Ragdoll).to receive(:search_similar_content).and_return(mock_results)
           allow(mock_client).to receive(:search).and_return({
             query: query,
             results: mock_results,
@@ -163,6 +165,9 @@ RSpec.describe Ragdoll do
     it 'passes options to client constructor' do
       options = { embedding_service: double('service') }
 
+      # Reset memoized client first
+      Ragdoll.instance_variable_set(:@client, nil)
+      
       expect(Ragdoll::Client).to receive(:new).with(options)
 
       Ragdoll.client(options)
@@ -186,14 +191,18 @@ RSpec.describe Ragdoll do
       subject { Ragdoll.client }
       
       before do
-        allow(Ragdoll.client).to receive(:healthy?).and_return(true)
+        allow(Ragdoll.client).to receive(:healthy?).and_call_original
         allow(Ragdoll.client).to receive(:stats).and_return({ total_documents: 0 })
+        allow(Ragdoll.client.instance_variable_get(:@api)).to receive(:get_document_stats).and_return({ total_documents: 0 })
       end
     end
   end
 
   describe 'error handling and recovery' do
     it 'handles client creation errors gracefully' do
+      # Reset memoized client first
+      Ragdoll.instance_variable_set(:@client, nil)
+      
       allow(Ragdoll::Client).to receive(:new)
         .and_raise(StandardError.new("Client creation error"))
 
@@ -203,7 +212,7 @@ RSpec.describe Ragdoll do
     it 'handles API method errors appropriately' do
       mock_client = instance_double(Ragdoll::Client)
       allow(Ragdoll).to receive(:client).and_return(mock_client)
-      allow(mock_client).to receive(:search)
+      allow(mock_client).to receive(:search_similar_content)
         .and_raise(Ragdoll::SearchError.new("Search failed"))
 
       expect { Ragdoll.search("test") }.to raise_error(Ragdoll::SearchError, /Search failed/)

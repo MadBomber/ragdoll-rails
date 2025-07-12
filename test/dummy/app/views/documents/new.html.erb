@@ -1,0 +1,178 @@
+<% content_for :title, "Add Document - Ragdoll Engine Demo" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-plus"></i> Add Document</h1>
+      <%= link_to "Back to Documents", documents_path, class: "btn btn-outline-secondary" %>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="file-tab" data-bs-toggle="tab" href="#file-upload" role="tab">
+              <i class="fas fa-upload"></i> Upload Files
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="text-tab" data-bs-toggle="tab" href="#text-content" role="tab">
+              <i class="fas fa-keyboard"></i> Text Content
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="directory-tab" data-bs-toggle="tab" href="#directory-upload" role="tab">
+              <i class="fas fa-folder"></i> Directory
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body">
+        <div class="tab-content">
+          <!-- File Upload Tab -->
+          <div class="tab-pane fade show active" id="file-upload" role="tabpanel">
+            <%= form_with model: @document, local: true, multipart: true, class: "needs-validation", novalidate: true do |form| %>
+              <div class="mb-3">
+                <label for="document_files" class="form-label">Select Files</label>
+                <%= form.file_field :files, multiple: true, accept: ".pdf,.docx,.txt,.md,.html,.json,.xml,.csv", class: "form-control", required: true %>
+                <div class="form-text">
+                  Supported formats: PDF, DOCX, TXT, MD, HTML, JSON, XML, CSV
+                </div>
+                <div class="invalid-feedback">
+                  Please select at least one file.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="document_metadata" class="form-label">Metadata (Optional)</label>
+                <%= form.text_area :metadata, placeholder: '{"author": "John Doe", "category": "technical"}', class: "form-control", rows: 3 %>
+                <div class="form-text">
+                  Additional metadata in JSON format
+                </div>
+              </div>
+              
+              <%= form.submit "Upload Files", class: "btn btn-primary" %>
+            <% end %>
+          </div>
+          
+          <!-- Text Content Tab -->
+          <div class="tab-pane fade" id="text-content" role="tabpanel">
+            <%= form_with model: @document, local: true, class: "needs-validation", novalidate: true do |form| %>
+              <div class="mb-3">
+                <label for="document_title" class="form-label">Title</label>
+                <%= form.text_field :title, placeholder: "Enter document title", class: "form-control", required: true %>
+                <div class="invalid-feedback">
+                  Please provide a title.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="document_text_content" class="form-label">Content</label>
+                <%= form.text_area :text_content, placeholder: "Enter your text content here...", class: "form-control", rows: 10, required: true %>
+                <div class="invalid-feedback">
+                  Please provide some content.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="document_metadata" class="form-label">Metadata (Optional)</label>
+                <%= form.text_area :metadata, placeholder: '{"author": "John Doe", "category": "technical"}', class: "form-control", rows: 3 %>
+                <div class="form-text">
+                  Additional metadata in JSON format
+                </div>
+              </div>
+              
+              <%= form.submit "Add Document", class: "btn btn-primary" %>
+            <% end %>
+          </div>
+          
+          <!-- Directory Upload Tab -->
+          <div class="tab-pane fade" id="directory-upload" role="tabpanel">
+            <%= form_with url: bulk_upload_documents_path, method: :post, local: true, class: "needs-validation", novalidate: true do |form| %>
+              <div class="mb-3">
+                <label for="directory_path" class="form-label">Directory Path</label>
+                <%= form.text_field :directory_path, placeholder: "/path/to/documents", class: "form-control", required: true %>
+                <div class="form-text">
+                  Full path to directory containing documents to import
+                </div>
+                <div class="invalid-feedback">
+                  Please provide a valid directory path.
+                </div>
+              </div>
+              
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Note:</strong> This will recursively process all supported files in the specified directory.
+                Large directories may take some time to process.
+              </div>
+              
+              <%= form.submit "Import Directory", class: "btn btn-warning" %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Upload Information</h5>
+      </div>
+      <div class="card-body">
+        <h6>Supported File Types:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-file-pdf text-danger"></i> PDF Documents</li>
+          <li><i class="fas fa-file-word text-primary"></i> Word Documents (.docx)</li>
+          <li><i class="fas fa-file-alt text-secondary"></i> Text Files (.txt, .md)</li>
+          <li><i class="fas fa-file-code text-warning"></i> HTML Files</li>
+          <li><i class="fas fa-file-code text-info"></i> JSON/XML Files</li>
+          <li><i class="fas fa-file-csv text-success"></i> CSV Files</li>
+        </ul>
+        
+        <hr>
+        
+        <h6>Processing:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-cogs text-primary"></i> Automatic content extraction</li>
+          <li><i class="fas fa-cut text-success"></i> Intelligent text chunking</li>
+          <li><i class="fas fa-vector-square text-info"></i> Vector embedding generation</li>
+          <li><i class="fas fa-search text-warning"></i> Search optimization</li>
+        </ul>
+        
+        <hr>
+        
+        <h6>Features:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-tags text-primary"></i> Metadata extraction</li>
+          <li><i class="fas fa-language text-success"></i> Multi-language support</li>
+          <li><i class="fas fa-chart-line text-info"></i> Usage analytics</li>
+          <li><i class="fas fa-sync text-warning"></i> Reprocessing support</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+  'use strict';
+  window.addEventListener('load', function() {
+    var forms = document.getElementsByClassName('needs-validation');
+    var validation = Array.prototype.filter.call(forms, function(form) {
+      form.addEventListener('submit', function(event) {
+        if (form.checkValidity() === false) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  }, false);
+})();
+</script>

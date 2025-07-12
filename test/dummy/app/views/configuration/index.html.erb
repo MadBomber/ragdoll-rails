@@ -1,0 +1,273 @@
+<% content_for :title, "Configuration - Ragdoll Engine Demo" %>
+
+<div class="row">
+  <div class="col-12">
+    <h1><i class="fas fa-cog"></i> Configuration</h1>
+    <p class="text-muted">Configure your Ragdoll engine settings and provider connections</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-wrench"></i> Engine Configuration</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: configuration_path, method: :patch, local: true, class: "needs-validation", novalidate: true do |form| %>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">LLM Provider</label>
+                <%= form.select "configuration[llm_provider]", 
+                    options_for_select(@available_providers.map { |p| [p.titleize, p] }, @configuration.llm_provider), 
+                    {}, 
+                    { class: "form-select" } %>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Embedding Provider</label>
+                <%= form.select "configuration[embedding_provider]", 
+                    options_for_select(@available_providers.map { |p| [p.titleize, p] }, @configuration.embedding_provider), 
+                    {}, 
+                    { class: "form-select" } %>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Embedding Model</label>
+            <%= form.select "configuration[embedding_model]", 
+                options_for_select(@available_models[@configuration.embedding_provider.to_sym]&.map { |m| [m, m] } || [], @configuration.embedding_model), 
+                {}, 
+                { class: "form-select" } %>
+          </div>
+          
+          <hr>
+          
+          <h6>Processing Settings</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Chunk Size</label>
+                <%= form.number_field "configuration[chunk_size]", value: @configuration.chunk_size, min: 100, max: 5000, class: "form-control" %>
+                <div class="form-text">Characters per chunk (100-5000)</div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Chunk Overlap</label>
+                <%= form.number_field "configuration[chunk_overlap]", value: @configuration.chunk_overlap, min: 0, max: 1000, class: "form-control" %>
+                <div class="form-text">Overlap between chunks (0-1000)</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Max Search Results</label>
+                <%= form.number_field "configuration[max_search_results]", value: @configuration.max_search_results, min: 1, max: 100, class: "form-control" %>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Similarity Threshold</label>
+                <%= form.number_field "configuration[search_similarity_threshold]", value: @configuration.search_similarity_threshold, min: 0.0, max: 1.0, step: 0.1, class: "form-control" %>
+              </div>
+            </div>
+          </div>
+          
+          <hr>
+          
+          <h6>Feature Flags</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-check mb-3">
+                <%= form.check_box "configuration[enable_search_analytics]", { checked: @configuration.enable_search_analytics, class: "form-check-input" }, "true", "false" %>
+                <%= form.label "configuration[enable_search_analytics]", "Enable Search Analytics", class: "form-check-label" %>
+              </div>
+              
+              <div class="form-check mb-3">
+                <%= form.check_box "configuration[enable_document_summarization]", { checked: @configuration.enable_document_summarization, class: "form-check-input" }, "true", "false" %>
+                <%= form.label "configuration[enable_document_summarization]", "Enable Document Summarization", class: "form-check-label" %>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="form-check mb-3">
+                <%= form.check_box "configuration[enable_usage_tracking]", { checked: @configuration.enable_usage_tracking, class: "form-check-input" }, "true", "false" %>
+                <%= form.label "configuration[enable_usage_tracking]", "Enable Usage Tracking", class: "form-check-label" %>
+              </div>
+              
+              <div class="form-check mb-3">
+                <%= form.check_box "configuration[usage_ranking_enabled]", { checked: @configuration.usage_ranking_enabled, class: "form-check-input" }, "true", "false" %>
+                <%= form.label "configuration[usage_ranking_enabled]", "Enable Usage-Based Ranking", class: "form-check-label" %>
+              </div>
+            </div>
+          </div>
+          
+          <hr>
+          
+          <h6>API Keys</h6>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">OpenAI API Key</label>
+                <%= form.password_field :openai_api_key, value: @configuration.openai_api_key, placeholder: "sk-...", class: "form-control" %>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label">Anthropic API Key</label>
+                <%= form.password_field :anthropic_api_key, value: @configuration.anthropic_api_key, placeholder: "sk-ant-...", class: "form-control" %>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label">Google API Key</label>
+                <%= form.password_field :google_api_key, value: @configuration.google_api_key, placeholder: "AIza...", class: "form-control" %>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Azure API Key</label>
+                <%= form.password_field :azure_api_key, value: @configuration.azure_api_key, placeholder: "...", class: "form-control" %>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label">Ollama URL</label>
+                <%= form.url_field :ollama_url, value: @configuration.ollama_url, placeholder: "http://localhost:11434", class: "form-control" %>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label">Hugging Face API Key</label>
+                <%= form.password_field :huggingface_api_key, value: @configuration.huggingface_api_key, placeholder: "hf_...", class: "form-control" %>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4">
+            <%= form.submit "Save Configuration", class: "btn btn-primary" %>
+            <button type="button" class="btn btn-outline-secondary" onclick="testConfiguration()">Test Configuration</button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Current Statistics</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row">
+          <dt class="col-sm-6">Documents:</dt>
+          <dd class="col-sm-6"><%= @current_stats[:total_documents] %></dd>
+          
+          <dt class="col-sm-6">Embeddings:</dt>
+          <dd class="col-sm-6"><%= @current_stats[:total_embeddings] %></dd>
+          
+          <dt class="col-sm-6">Dimensions:</dt>
+          <dd class="col-sm-6"><%= @current_stats[:embedding_dimensions] %></dd>
+          
+          <dt class="col-sm-6">Avg Chunk Size:</dt>
+          <dd class="col-sm-6"><%= @current_stats[:average_chunk_size] %></dd>
+        </dl>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5><i class="fas fa-lightbulb"></i> Configuration Tips</h5>
+      </div>
+      <div class="card-body">
+        <h6>Chunk Size:</h6>
+        <ul class="list-unstyled small">
+          <li><i class="fas fa-arrow-right text-primary"></i> Smaller chunks: More precise search</li>
+          <li><i class="fas fa-arrow-right text-success"></i> Larger chunks: Better context</li>
+          <li><i class="fas fa-arrow-right text-info"></i> Recommended: 500-1500 characters</li>
+        </ul>
+        
+        <hr>
+        
+        <h6>Similarity Threshold:</h6>
+        <ul class="list-unstyled small">
+          <li><i class="fas fa-arrow-right text-primary"></i> Higher values: More precise results</li>
+          <li><i class="fas fa-arrow-right text-success"></i> Lower values: More results</li>
+          <li><i class="fas fa-arrow-right text-info"></i> Recommended: 0.6-0.8</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5><i class="fas fa-plug"></i> Provider Support</h5>
+      </div>
+      <div class="card-body">
+        <% @available_providers.each do |provider| %>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span><%= provider.titleize %></span>
+            <span class="badge bg-<%= provider == @configuration.llm_provider.to_s ? 'success' : 'secondary' %>">
+              <%= provider == @configuration.llm_provider.to_s ? 'Active' : 'Available' %>
+            </span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function testConfiguration() {
+  const button = event.target;
+  const originalText = button.textContent;
+  
+  button.textContent = 'Testing...';
+  button.disabled = true;
+  
+  fetch('/api/v1/system_stats')
+    .then(response => response.json())
+    .then(data => {
+      if (data.health_check.database_connection && data.health_check.embedding_service) {
+        alert('Configuration test successful! All services are healthy.');
+      } else {
+        alert('Configuration test failed. Please check your settings.');
+      }
+    })
+    .catch(error => {
+      alert('Configuration test failed: ' + error.message);
+    })
+    .finally(() => {
+      button.textContent = originalText;
+      button.disabled = false;
+    });
+}
+
+// Update model options based on provider selection
+document.addEventListener('DOMContentLoaded', function() {
+  const providerSelect = document.querySelector('[name="configuration[embedding_provider]"]');
+  const modelSelect = document.querySelector('[name="configuration[embedding_model]"]');
+  
+  if (providerSelect && modelSelect) {
+    const modelOptions = <%= @available_models.to_json.html_safe %>;
+    
+    providerSelect.addEventListener('change', function() {
+      const provider = this.value;
+      const options = modelOptions[provider] || [];
+      
+      modelSelect.innerHTML = '';
+      options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option;
+        optionElement.textContent = option;
+        modelSelect.appendChild(optionElement);
+      });
+    });
+  }
+});
+</script>

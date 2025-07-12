@@ -160,7 +160,7 @@ RSpec.describe Ragdoll::ImportFileJob, type: :job do
 
       context 'with existing document (update)' do
         let(:file_path) { create_test_text_file("Updated content") }
-        let!(:existing_doc) { create(:ragdoll_document, location: file_path, :with_embeddings) }
+        let!(:existing_doc) { create(:ragdoll_document, :with_embeddings, location: file_path) }
 
         after { cleanup_test_files }
 

@@ -5,7 +5,7 @@ require 'docx'
 
 module Ragdoll
   class DocumentParser
-    class ParseError < Error; end
+    class ParseError < Ragdoll::Error; end
     class UnsupportedFormatError < ParseError; end
 
     def self.parse(file_path)
