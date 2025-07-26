@@ -1,7 +1,6 @@
-# This file defines the version number for the Ragdoll gem.
-
-# frozen_string_literal: true
+# ragdoll/version.rb
+# This file is shared between ragdoll-core, ragdoll-cli and ragdoll-rails
 
 module Ragdoll
-  VERSION = "0.1.0"
+  VERSION = '0.0.1'
 end
