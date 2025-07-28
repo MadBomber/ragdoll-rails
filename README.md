@@ -20,9 +20,14 @@
 
 # Ragdoll::Rails
 
-**Ragdoll** is a powerful Rails engine that adds **Retrieval Augmented Generation (RAG)** capabilities to any Rails application. It provides semantic search, document ingestion, and context-enhanced AI prompts using vector embeddings and PostgreSQL with pgvector. With support for multiple LLM providers through ruby_llm, you can use OpenAI, Anthropic, Google, Azure, Ollama, and more.
+**Ragdoll** is a powerful Rails engine that adds **Multi-modal Retrieval Augmented Generation (RAG)** capabilities to any Rails application. It provides semantic search, document ingestion, and context-enhanced AI prompts using vector embeddings and PostgreSQL with pgvector. With support for multiple LLM providers through [ruby_llm](https://rubyllm.com), you can use OpenAI, Anthropic, Google, Azure, Ollama, and more.
 
-[Demo Rails App](https://github.com/madbomber/ragdoll_demo_app)
+See Also:
+
+- [Ragdoll::Core](https://github.com/MadBomber/ragdoll)
+- [Ragdoll::CLI](https://github.com/MadBomber/ragdoll-cli)
+- [Ragdoll::Rails](https://github.com/MadBomber/ragdoll-rails) this gem
+- [Demo Rails App](https://github.com/madbomber/ragdoll_demo_app)
 
 ## ✨ Features
 
@@ -44,7 +49,8 @@ Add Ragdoll to your Rails application:
 
 ```ruby
 # Gemfile
-gem 'ragdoll'
+gem 'ragdoll-rails'
+gem 'ragdoll-cli' # Optional CLI tool for managing documents and embeddings
 ```
 
 ```bash
@@ -89,8 +95,8 @@ end
 
 ```ruby
 # Add documents
-Ragdoll.add_file('/path/to/manual.pdf')
-Ragdoll.add_text('Your content here', title: 'Knowledge Base')
+Ragdoll.add_document('/path/to/manual.pdf')
+Ragdoll.add_directory('/path/to/directory_of_documents', recursive: true)
 
 # Enhance AI prompts with context
 enhanced = Ragdoll.enhance_prompt(
@@ -98,8 +104,8 @@ enhanced = Ragdoll.enhance_prompt(
   context_limit: 5
 )
 
-# Use enhanced prompt with your AI service
-ai_response = YourAI.complete(enhanced[:enhanced_prompt])
+# Use enhanced prompt with RubyLLM
+ai_response = RubyLLM.ask(enhanced[:enhanced_prompt])
 ```
 
 ## 📖 API Reference
