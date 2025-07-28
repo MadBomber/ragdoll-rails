@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module Ragdoll
-  class Search < ApplicationRecord
-    self.table_name = 'ragdoll_searches'
+  module Rails
+    class Search < ApplicationRecord
+      self.table_name = 'ragdoll_searches'
 
     # Override dangerous attribute to allow access to model_name column
     def self.dangerous_attribute_method?(name)
@@ -194,6 +195,7 @@ module Ragdoll
       # This could be extended to update real-time analytics
       # For now, it's just a placeholder for future enhancements
       Rails.logger.debug "Search recorded: #{query} (#{result_count} results in #{search_time}s)"
+    end
     end
   end
 end

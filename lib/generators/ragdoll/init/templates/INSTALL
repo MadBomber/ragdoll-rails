@@ -1,0 +1,56 @@
+===============================================================================
+
+    Ragdoll Configuration Created Successfully!
+
+===============================================================================
+
+The Ragdoll initializer has been created at:
+  config/initializers/ragdoll_config.rb
+
+Next steps:
+
+1. Configure your LLM provider API keys in environment variables:
+   
+   For OpenAI:
+     export OPENAI_API_KEY="your-api-key-here"
+   
+   For Anthropic:
+     export ANTHROPIC_API_KEY="your-api-key-here"
+   
+   For Google:
+     export GOOGLE_API_KEY="your-api-key-here"
+     export GOOGLE_PROJECT_ID="your-project-id"
+
+2. Install and run database migrations:
+   
+   rails ragdoll:install:migrations
+   rails db:migrate
+
+3. Ensure you have PostgreSQL with pgvector extension installed:
+   
+   # In PostgreSQL console:
+   CREATE EXTENSION IF NOT EXISTS vector;
+
+4. Configure Sidekiq for background job processing (optional):
+   
+   # Add to your Gemfile if not already present:
+   gem 'sidekiq'
+   
+   # Start Sidekiq:
+   bundle exec sidekiq
+
+5. Start using Ragdoll in your Rails application:
+   
+   # Add documents
+   Ragdoll.add_document('/path/to/document.pdf')
+   
+   # Enhance prompts with context
+   enhanced = Ragdoll.enhance_prompt('How do I configure the database?')
+   
+   # Use with your LLM
+   response = RubyLLM.ask(enhanced[:enhanced_prompt])
+
+For more information, visit:
+  https://github.com/MadBomber/ragdoll-rails
+
+===============================================================================

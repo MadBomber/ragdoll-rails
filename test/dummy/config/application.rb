@@ -18,7 +18,7 @@ require "action_cable/engine"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-require "ragdoll"
+require "ragdoll-rails"
 
 module Dummy
   class Application < Rails::Application

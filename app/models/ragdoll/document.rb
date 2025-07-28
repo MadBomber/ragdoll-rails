@@ -1,13 +1,15 @@
-# This file defines the Document model for the Ragdoll gem.
+# This file defines the Rails-specific Document model for the Ragdoll Rails engine.
+# This model is separate from Ragdoll::Core::Models::Document to avoid conflicts.
 
 # frozen_string_literal: true
 
 module Ragdoll
-  class Document < ApplicationRecord
-    self.table_name = 'ragdoll_documents'
+  module Rails
+    class Document < ApplicationRecord
+      self.table_name = 'ragdoll_documents'
     
     # Associations
-    has_many :ragdoll_embeddings, class_name: 'Ragdoll::Embedding', foreign_key: 'document_id', dependent: :destroy
+    has_many :ragdoll_embeddings, class_name: 'Ragdoll::Rails::Embedding', foreign_key: 'document_id', dependent: :destroy
     has_one_attached :file if respond_to?(:has_one_attached)
     
     # Validations
@@ -57,7 +59,8 @@ module Ragdoll
     
     def needs_summary?
       return false unless content.present?
-      return false if content.length < Ragdoll.configuration.summary_min_content_length
+      # Business logic should be handled by ragdoll gem
+      # TODO: Delegate to Ragdoll.needs_summary?(content, summary, summary_generated_at)
       
       !has_summary? || summary_stale?
     end
@@ -68,21 +71,16 @@ module Ragdoll
     end
     
     def regenerate_summary!
+      # Business logic for summary generation should be handled by the ragdoll gem
+      # This is a placeholder that delegates to the core ragdoll functionality
       return false unless content.present?
       
-      summarization_service = Ragdoll::SummarizationService.new
-      new_summary = summarization_service.generate_document_summary(self)
+      # TODO: Delegate to Ragdoll gem's summarization functionality
+      # summarization_result = Ragdoll.generate_summary(content, options)
+      # Update the model with the result
       
-      if new_summary.present?
-        update!(
-          summary: new_summary,
-          summary_generated_at: Time.current,
-          summary_model: Ragdoll.configuration.summary_model || Ragdoll.configuration.default_model
-        )
-        true
-      else
-        false
-      end
+      Rails.logger.warn "Summary regeneration not implemented - should delegate to ragdoll gem"
+      false
     end
     
     # Processing status helpers
@@ -116,6 +114,7 @@ module Ragdoll
     def processing_duration
       return nil unless processing_started_at && processing_finished_at
       processing_finished_at - processing_started_at
+    end
     end
   end
 end

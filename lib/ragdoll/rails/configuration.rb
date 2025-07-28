@@ -4,32 +4,20 @@ module Ragdoll
   module Rails
     class Configuration
       # Rails-specific configuration options
-      attr_accessor :use_background_jobs, :job_queue, :job_adapter
+      attr_accessor :use_background_jobs, :job_queue, :job_adapter, :queue_name, :max_file_size, :allowed_file_types
       
       def initialize
         @use_background_jobs = true
         @job_queue = :default
         @job_adapter = :sidekiq
+        @queue_name = :ragdoll
+        @max_file_size = 10 * 1024 * 1024 # 10MB
+        @allowed_file_types = %w[pdf docx txt md html htm json xml csv]
       end
 
-      # Configure Ragdoll Core with Rails-specific defaults
       def configure_core
-        Ragdoll::Core.configure do |config|
-          config.storage_backend = :activerecord
-          config.storage_config = {
-            document_model: Ragdoll::Document,
-            embedding_model: Ragdoll::Embedding
-          }
-          
-          # Use Rails cache for embeddings if available
-          if defined?(::Rails) && ::Rails.cache
-            config.cache_embeddings = true
-          end
-          
-          # Enable search analytics for Rails apps
-          config.enable_search_analytics = true
-          config.enable_usage_tracking = true
-        end
+        # Delegate to core ragdoll gem configuration
+        # This would configure the core ragdoll gem based on Rails-specific settings
       end
     end
 

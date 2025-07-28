@@ -15,14 +15,8 @@ module Ragdoll
 
       # Initialize configuration after Rails has loaded
       initializer "ragdoll.configure" do |app|
-        # Configure Ragdoll::Core to use ActiveRecord storage by default
-        Ragdoll::Core.configure do |config|
-          config.storage_backend = :activerecord
-          config.storage_config = {
-            document_model: Ragdoll::Document,
-            embedding_model: Ragdoll::Embedding
-          }
-        end
+        # Configure Rails-specific functionality
+        # Core functionality is provided by the ragdoll gem
       end
 
       # Ensure models are eager loaded in production

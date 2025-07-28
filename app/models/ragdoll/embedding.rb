@@ -1,12 +1,14 @@
-# This file defines the Embedding model for the Ragdoll gem.
+# This file defines the Rails-specific Embedding model for the Ragdoll Rails engine.
+# This model is separate from Ragdoll::Core::Models::Embedding to avoid conflicts.
 
 # frozen_string_literal: true
 
 module Ragdoll
-  class Embedding < ApplicationRecord
-    searchkick text_middle: [:metadata_content, :metadata_propositions] if defined?(Searchkick)
+  module Rails
+    class Embedding < ApplicationRecord
+      searchkick text_middle: [:metadata_content, :metadata_propositions] if defined?(Searchkick)
 
-    belongs_to :document
+    belongs_to :document, class_name: 'Ragdoll::Rails::Document'
 
     # Override dangerous attribute to allow access to model_name column
     def self.dangerous_attribute_method?(name)
@@ -24,5 +26,6 @@ module Ragdoll
 
     # Assuming the vector column is named 'vector'
     neighbor :vector, method: :euclidean if respond_to?(:neighbor)
+    end
   end
 end
