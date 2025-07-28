@@ -1,12 +1,24 @@
+<div align="center" style="background-color: yellow; color: black; padding: 20px; margin: 20px 0; border: 2px solid black; font-size: 48px; font-weight: bold;">
+  ⚠️ CAUTION ⚠️<br />
+  Software Under Development by a Crazy Man
+</div>
+<br />
 <div align="center">
-  <h1>🎯 Ragdoll</h1>
-  <p><strong>Retrieval Augmented Generation for Rails Applications</strong></p>
-  <img src="images/ragdoll.png" alt="Raggedy Ann playing with blocks" width="200">
+  <table>
+    <tr>
+      <td width="50%">
+        <a href="https://research.ibm.com/blog/retrieval-augmented-generation-RAG" target="_blank">
+          <img src="ragdoll-rails.png" alt="Ragdoll Riding the Rails" width="800">
+        </a>
+      </td>
+      <td width="50%" valign="top">
+        <p>Multi-modal RAG (Retrieval-Augmented Generation) is an architecture that integrates multiple data types (such as text, images, and audio) to enhance AI response generation. It combines retrieval-based methods, which fetch relevant information from a knowledge base, with generative large language models (LLMs) that create coherent and contextually appropriate outputs. This approach allows for more comprehensive and engaging user interactions, such as chatbots that respond with both text and images or educational tools that incorporate visual aids into learning materials. By leveraging various modalities, multi-modal RAG systems improve context understanding and user experience.</p>
+      </td>
+    </tr>
+  </table>
 </div>
 
----
-
-> CAUTION: Ragdoll is still under development and may not be suitable for production use.
+# Ragdoll::Rails
 
 **Ragdoll** is a powerful Rails engine that adds **Retrieval Augmented Generation (RAG)** capabilities to any Rails application. It provides semantic search, document ingestion, and context-enhanced AI prompts using vector embeddings and PostgreSQL with pgvector. With support for multiple LLM providers through ruby_llm, you can use OpenAI, Anthropic, Google, Azure, Ollama, and more.
 

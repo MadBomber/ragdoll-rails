@@ -30,24 +30,4 @@ Gem::Specification.new do |spec|
     "README.md"
   ]
   spec.require_paths = ["lib"]
-
-  # Core dependency
-  spec.add_dependency "ragdoll-core", "~> 1.0"
-
-  # Rails engine dependency
-  spec.add_dependency "rails", "~> 8.0"
-
-  # Database and vector search
-  spec.add_dependency "pg", "~> 1.1"
-  spec.add_dependency "pgvector", "~> 0.2"
-
-  # Background job processing
-  spec.add_dependency "sidekiq", "~> 7.0"
-
-  # Development dependencies
-  spec.add_development_dependency "rspec-core", "~> 3.12"
-  spec.add_development_dependency "rspec-expectations", "~> 3.12"
-  spec.add_development_dependency "rspec-mocks", "~> 3.12"
-  spec.add_development_dependency "factory_bot_rails", "~> 6.0"
-  spec.add_development_dependency "database_cleaner-active_record", "~> 2.0"
 end
