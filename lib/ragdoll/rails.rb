@@ -2,7 +2,12 @@
 
 require_relative 'rails/version'
 require_relative 'rails/configuration'
-require_relative 'rails/engine'
+begin
+  require_relative 'rails/engine'
+rescue LoadError, NameError => e
+  # Skip engine loading if Rails is not available (e.g., in tests)
+  puts "Warning: Could not load Rails engine: #{e.message}" if ENV['RAGDOLL_VERBOSE']
+end
 
 module Ragdoll
   module Rails

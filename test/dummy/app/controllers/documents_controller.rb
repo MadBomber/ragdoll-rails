@@ -6,14 +6,14 @@ class DocumentsController < ApplicationController
     @documents = @documents.where(status: params[:status]) if params[:status].present?
     @documents = @documents.where(document_type: params[:document_type]) if params[:document_type].present?
     @documents = @documents.where('title ILIKE ?', "%#{params[:search]}%") if params[:search].present?
-    @documents = @documents.includes(:ragdoll_embeddings).order(created_at: :desc)
+    @documents = @documents.includes(:text_embeddings).order(created_at: :desc)
     
     @document_types = Ragdoll::Document.distinct.pluck(:document_type).compact
     @statuses = Ragdoll::Document.distinct.pluck(:status).compact
   end
   
   def show
-    @embeddings = @document.ragdoll_embeddings.order(created_at: :desc)
+    @embeddings = @document.text_embeddings.order(created_at: :desc)
     @recent_searches = Ragdoll::Search.order(created_at: :desc).limit(10)
   end
   
@@ -101,13 +101,13 @@ class DocumentsController < ApplicationController
   def reprocess
     begin
       # Delete existing embeddings
-      @document.ragdoll_embeddings.destroy_all
+      @document.text_embeddings.destroy_all
       
       # Reprocess document
       @document.update(status: 'pending')
       
       # Process embeddings in background
-      Ragdoll::ImportFileJob.perform_later(@document.id)
+      Ragdoll::GenerateEmbeddingsJob.perform_later(@document.id)
       
       redirect_to @document, notice: 'Document reprocessing initiated.'
     rescue => e
@@ -154,9 +154,9 @@ class DocumentsController < ApplicationController
     if params[:document_ids].present?
       documents = Ragdoll::Document.where(id: params[:document_ids])
       documents.each do |document|
-        document.ragdoll_embeddings.destroy_all
+        document.text_embeddings.destroy_all
         document.update(status: 'pending')
-        Ragdoll::ImportFileJob.perform_later(document.id)
+        Ragdoll::GenerateEmbeddingsJob.perform_later(document.id)
       end
       flash[:notice] = "Reprocessing initiated for #{documents.count} documents."
     else

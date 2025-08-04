@@ -4,12 +4,11 @@ FactoryBot.define do
   factory :ragdoll_document, class: 'Ragdoll::Document' do
     sequence(:location) { |n| "test://document-#{n}" }
     title { "Test Document" }
-    content { "This is a test document with some content for testing purposes." }
     document_type { "text" }
     source_type { "test" }
     metadata { {} }
-    chunk_size { 1000 }
-    chunk_overlap { 200 }
+    summary { "" }
+    keywords { "" }
     status { "pending" }
 
     trait :completed do
@@ -56,17 +55,20 @@ FactoryBot.define do
     trait :markdown do
       document_type { "markdown" }
       location { "test://document.md" }
-      content { "# Test Document\n\nThis is a **markdown** document." }
     end
 
     trait :with_embeddings do
       after(:create) do |document|
-        create_list(:ragdoll_embedding, 3, document: document)
+        # Create text content first, then embeddings
+        text_content = create(:ragdoll_text_content, document: document, content: "Test content for embeddings")
+        create_list(:ragdoll_embedding, 3, embeddable: text_content)
       end
     end
 
     trait :large_content do
-      content { "Large content. " * 1000 } # ~13KB content
+      after(:create) do |document|
+        create(:ragdoll_text_content, document: document, content: "Large content. " * 1000)
+      end
     end
 
     trait :with_summary do
@@ -77,9 +79,9 @@ FactoryBot.define do
 
     trait :needs_summary do
       summary { nil }
-      summary_generated_at { nil }
-      summary_model { nil }
-      content { "This is a document with enough content to warrant a summary. " * 50 }
+      after(:create) do |document|
+        create(:ragdoll_text_content, document: document, content: "This is a document with enough content to warrant a summary. " * 50)
+      end
     end
 
     trait :stale_summary do

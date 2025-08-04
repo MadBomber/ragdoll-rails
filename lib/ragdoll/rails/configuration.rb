@@ -21,13 +21,5 @@ module Ragdoll
       end
     end
 
-    def self.configuration
-      @configuration ||= Configuration.new
-    end
-
-    def self.configure
-      yield(configuration)
-      configuration.configure_core
-    end
   end
 end
