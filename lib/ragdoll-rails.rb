@@ -6,6 +6,7 @@ require_relative "ragdoll/rails"
 # The ragdoll gem provides the core business logic functionality
 begin
   require 'ragdoll'
-rescue LoadError
-  raise LoadError, "The ragdoll gem is required for ragdoll-rails to function. Please add 'gem \"ragdoll\"' to your Gemfile."
+rescue LoadError => e
+  puts "Warning: Could not load ragdoll gem: #{e.message}"
+  puts "Please ensure 'gem \"ragdoll\"' is in your Gemfile"
 end

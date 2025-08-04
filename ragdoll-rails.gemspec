@@ -30,4 +30,8 @@ Gem::Specification.new do |spec|
     "README.md"
   ]
   spec.require_paths = ["lib"]
+  
+  # Core dependencies
+  spec.add_dependency "ragdoll", ">= 0.1.0"
+  spec.add_dependency "rails", ">= 7.0.0"
 end

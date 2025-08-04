@@ -5,10 +5,27 @@ gem "rails", "~> 8.0.2"
 
 # Ragdoll engine for testing
 gem "ragdoll-rails", path: "../.."
+# Core ragdoll gem and its dependencies
+gem "ragdoll", path: "../../../ragdoll"
+
+# Ragdoll dependencies from core gem
+gem "pg", "~> 1.1"
+gem "pgvector"
+gem "ruby_llm"
+gem "pdf-reader"
+gem "docx"
+gem "rubyzip"
+gem "activejob"
+gem "activerecord"
+gem "rmagick"
+gem "shrine"
+gem "neighbor"
+gem "opensearch-ruby"
+gem "searchkick"
+gem "ruby-progressbar"
+gem "debug_me"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
-# Use postgresql as the database for Active Record
-gem "pg", "~> 1.1"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
