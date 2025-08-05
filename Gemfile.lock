@@ -1,4 +1,18 @@
 PATH
+  remote: ../ragdoll
+  specs:
+    ragdoll (0.1.8)
+      activejob
+      activerecord
+      debug_me
+      docx
+      neighbor
+      pdf-reader
+      rmagick
+      ruby_llm
+      shrine
+
+PATH
   remote: .
   specs:
     ragdoll-rails (0.1.8)
@@ -9,6 +23,7 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    Ascii85 (2.0.1)
     actioncable (8.0.2)
       actionpack (= 8.0.2)
       activesupport (= 8.0.2)
@@ -82,6 +97,7 @@ GEM
       uri (>= 0.13.1)
     addressable (2.8.7)
       public_suffix (>= 2.0.2, < 7.0)
+    afm (0.2.2)
     amazing_print (1.8.1)
     async (2.27.0)
       console (~> 1.29)
@@ -113,6 +129,7 @@ GEM
       fiber-annotation
       fiber-local (~> 1.1)
       json
+    content_disposition (1.0.0)
     crass (1.0.6)
     database_cleaner-active_record (2.2.2)
       activerecord (>= 5.a)
@@ -121,6 +138,11 @@ GEM
     date (3.4.1)
     debug_me (1.1.1)
     diff-lcs (1.6.2)
+    docx (0.9.1)
+      nokogiri (~> 1.13, >= 1.13.0)
+      rubyzip (~> 2.0)
+    down (5.4.2)
+      addressable (~> 2.8)
     drb (2.2.3)
     dry-configurable (1.3.0)
       dry-core (~> 1.1)
@@ -184,6 +206,7 @@ GEM
     fiber-storage (1.0.1)
     globalid (1.2.1)
       activesupport (>= 6.1)
+    hashery (2.1.2)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     io-console (0.8.1)
@@ -212,6 +235,8 @@ GEM
     mini_portile2 (2.8.9)
     minitest (5.25.5)
     multipart-post (2.4.1)
+    neighbor (0.6.0)
+      activerecord (>= 7.1)
     net-http (0.6.0)
       uri
     net-imap (0.5.9)
@@ -243,6 +268,14 @@ GEM
       racc (~> 1.4)
     nokogiri (1.18.9-x86_64-linux-musl)
       racc (~> 1.4)
+    observer (0.1.2)
+    pdf-reader (2.14.1)
+      Ascii85 (>= 1.0, < 3.0, != 2.0.0)
+      afm (~> 0.2.1)
+      hashery (~> 2.0)
+      ruby-rc4
+      ttfunk
+    pkg-config (1.6.2)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -259,7 +292,6 @@ GEM
       rack (>= 1.3)
     rackup (2.2.1)
       rack (>= 3)
-    ragdoll (0.1.3)
     rails (8.0.2)
       actioncable (= 8.0.2)
       actionmailbox (= 8.0.2)
@@ -297,6 +329,9 @@ GEM
       connection_pool
     reline (0.6.2)
       io-console (~> 0.5)
+    rmagick (6.1.2)
+      observer (~> 0.1)
+      pkg-config (~> 1.4)
     rspec-core (3.13.5)
       rspec-support (~> 3.13.0)
     rspec-expectations (3.13.5)
@@ -314,7 +349,21 @@ GEM
       event_stream_parser (>= 0.3.0, < 2.0.0)
       faraday (>= 1)
       faraday-multipart (>= 1)
+    ruby-rc4 (0.1.5)
+    ruby_llm (1.5.1)
+      base64
+      event_stream_parser (~> 1)
+      faraday (>= 1.10.0)
+      faraday-multipart (>= 1)
+      faraday-net_http (>= 1)
+      faraday-retry (>= 1)
+      marcel (~> 1.0)
+      zeitwerk (~> 2)
+    rubyzip (2.4.1)
     securerandom (0.4.1)
+    shrine (3.6.0)
+      content_disposition (~> 1.0)
+      down (~> 5.1)
     sidekiq (8.0.6)
       connection_pool (>= 2.5.0)
       json (>= 2.9.0)
@@ -325,6 +374,8 @@ GEM
     thor (1.4.0)
     timeout (0.4.3)
     traces (0.16.2)
+    ttfunk (1.8.0)
+      bigdecimal (~> 3.1)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     uri (1.0.3)
@@ -354,6 +405,7 @@ DEPENDENCIES
   database_cleaner-active_record
   debug_me
   factory_bot_rails
+  ragdoll!
   ragdoll-rails!
   rspec-core
   rspec-expectations

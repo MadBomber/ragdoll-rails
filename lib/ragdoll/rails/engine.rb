@@ -5,7 +5,7 @@ require 'rails/engine'
 module Ragdoll
   module Rails
     class Engine < ::Rails::Engine
-      isolate_namespace Ragdoll
+      isolate_namespace Ragdoll::Rails
 
       config.generators do |g|
         g.test_framework :rspec
