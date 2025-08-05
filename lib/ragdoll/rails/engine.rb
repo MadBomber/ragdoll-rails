@@ -13,14 +13,6 @@ module Ragdoll
         g.factory_bot dir: 'spec/factories'
       end
 
-      # Ensure generators are loaded
-      config.to_prepare do
-        # Force load generators
-        Dir.glob(File.join(__dir__, "../../../generators/**/*_generator.rb")).each do |file|
-          require file
-        end
-      end
-
       # Initialize configuration after Rails has loaded
       initializer "ragdoll.configure" do |app|
         # Configure Rails-specific functionality
