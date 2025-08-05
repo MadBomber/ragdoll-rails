@@ -21,10 +21,11 @@ Next steps:
      export GOOGLE_API_KEY="your-api-key-here"
      export GOOGLE_PROJECT_ID="your-project-id"
 
-2. Install and run database migrations:
+2. Run database migrations:
    
-   rails ragdoll:install:migrations
    rails db:migrate
+   
+   Note: Migrations have been automatically copied to your db/migrate directory.
 
 3. Ensure you have PostgreSQL with pgvector extension installed:
    
