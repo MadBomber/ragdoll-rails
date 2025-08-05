@@ -32,7 +32,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Core dependencies
-  spec.add_dependency "ragdoll", git: "https://github.com/MadBomber/ragdoll.git"
+  spec.add_dependency "ragdoll"
   spec.add_dependency "rails", ">= 8.0.2"
   spec.add_dependency "sidekiq"
 
