@@ -30,8 +30,19 @@ Gem::Specification.new do |spec|
     "README.md"
   ]
   spec.require_paths = ["lib"]
-  
+
   # Core dependencies
-  spec.add_dependency "ragdoll", ">= 0.1.0"
-  spec.add_dependency "rails", ">= 7.0.0"
+  spec.add_dependency "ragdoll"
+  spec.add_dependency "rails", ">= 8.0.2"
+  spec.add_dependency "sidekiq"
+
+  # Development dependencies
+  spec.add_development_dependency "amazing_print"
+  spec.add_development_dependency "debug_me"
+  spec.add_development_dependency "claude-on-rails"
+  spec.add_development_dependency "rspec-core"
+  spec.add_development_dependency "rspec-expectations"
+  spec.add_development_dependency "rspec-mocks"
+  spec.add_development_dependency "factory_bot_rails"
+  spec.add_development_dependency "database_cleaner-active_record"
 end

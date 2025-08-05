@@ -1,9 +1,10 @@
 PATH
   remote: .
   specs:
-    ragdoll-rails (0.1.2)
-      ragdoll (>= 0.1.0)
-      rails (>= 7.0.0)
+    ragdoll-rails (0.1.8)
+      ragdoll
+      rails (>= 8.0.2)
+      sidekiq
 
 GEM
   remote: https://rubygems.org/
@@ -350,16 +351,13 @@ PLATFORMS
 DEPENDENCIES
   amazing_print
   claude-on-rails
-  database_cleaner-active_record (~> 2.0)
+  database_cleaner-active_record
   debug_me
-  factory_bot_rails (~> 6.0)
-  ragdoll
+  factory_bot_rails
   ragdoll-rails!
-  rails
-  rspec-core (~> 3.12)
-  rspec-expectations (~> 3.12)
-  rspec-mocks (~> 3.12)
-  sidekiq
+  rspec-core
+  rspec-expectations
+  rspec-mocks
 
 BUNDLED WITH
    2.6.3
