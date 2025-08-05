@@ -6,6 +6,23 @@ module Ragdoll
   module Rails
     class Engine < ::Rails::Engine
       isolate_namespace Ragdoll::Rails
+      engine_name 'ragdoll'
+
+      # Configure the engine to use migrations from the ragdoll gem
+      # Find the ragdoll gem path
+      begin
+        ragdoll_path = Gem::Specification.find_by_name('ragdoll').gem_dir
+      rescue Gem::MissingSpecError
+        # If not found as a gem (e.g., using path in Gemfile), try to find it relative to this engine
+        ragdoll_path = File.expand_path("../../../../ragdoll", __dir__)
+      end
+      
+      migration_path = File.join(ragdoll_path, 'db/migrate')
+      
+      # Set the migration paths for this engine to point to ragdoll gem
+      if File.exist?(migration_path)
+        config.paths["db/migrate"] = [migration_path]
+      end
 
       config.generators do |g|
         g.test_framework :rspec
