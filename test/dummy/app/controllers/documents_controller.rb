@@ -1,3 +1,5 @@
+require 'tempfile'
+
 class DocumentsController < ApplicationController
   before_action :set_document, only: [:show, :edit, :update, :destroy, :preview, :reprocess, :download]
   
@@ -33,18 +35,21 @@ class DocumentsController < ApplicationController
           FileUtils.mkdir_p(File.dirname(temp_path))
           File.binwrite(temp_path, file.read)
           
-          # Use Ragdoll client to add document
-          client = Ragdoll::Client.new
-          result = client.add_file(temp_path.to_s, {
-            title: file.original_filename,
-            metadata: {
+          # Use Ragdoll high-level API to add document
+          result = Ragdoll.add_document(path: temp_path.to_s)
+          
+          if result[:success]
+            document = Ragdoll::Document.find(result[:document_id])
+            # Update metadata
+            document.update!(metadata: {
               original_filename: file.original_filename,
               content_type: file.content_type,
               size: file.size
-            }
-          })
-          
-          @results << { file: file.original_filename, success: true, document: result }
+            })
+            @results << { file: file.original_filename, success: true, document: document }
+          else
+            @results << { file: file.original_filename, success: false, error: result[:error] }
+          end
           
           # Clean up temp file
           File.delete(temp_path) if File.exist?(temp_path)
@@ -56,12 +61,28 @@ class DocumentsController < ApplicationController
       render :upload_results
     elsif params[:document][:text_content].present?
       begin
-        client = Ragdoll::Client.new
-        @document = client.add_text(
-          params[:document][:text_content],
-          title: params[:document][:title] || "Text Document",
-          metadata: params[:document][:metadata] || {}
-        )
+        # Handle text content by creating a temporary file
+        temp_file = Tempfile.new(['text_content', '.txt'])
+        temp_file.write(params[:document][:text_content])
+        temp_file.rewind
+        
+        begin
+          result = Ragdoll.add_document(path: temp_file.path)
+          
+          if result[:success]
+            @document = Ragdoll::Document.find(result[:document_id])
+            # Update title and metadata if provided
+            updates = {}
+            updates[:title] = params[:document][:title] || "Text Document" if params[:document][:title].present? || @document.title.blank?
+            updates[:metadata] = params[:document][:metadata] if params[:document][:metadata].present?
+            @document.update!(updates) if updates.any?
+          else
+            raise result[:error] || "Failed to add document"
+          end
+        ensure
+          temp_file.close
+          temp_file.unlink
+        end
         redirect_to @document, notice: 'Document was successfully created.'
       rescue => e
         @document = Ragdoll::Document.new
@@ -126,8 +147,7 @@ class DocumentsController < ApplicationController
   def bulk_upload
     if params[:directory_path].present?
       begin
-        client = Ragdoll::Client.new
-        results = client.add_directory(params[:directory_path])
+        results = Ragdoll.add_directory(path: params[:directory_path])
         flash[:notice] = "Successfully processed #{results.count} files from directory."
       rescue => e
         flash[:alert] = "Error processing directory: #{e.message}"

@@ -1,21 +1,26 @@
 PATH
   remote: ../ragdoll
   specs:
-    ragdoll (0.1.8)
+    ragdoll (0.1.9)
       activejob
       activerecord
-      debug_me
       docx
       neighbor
+      opensearch-ruby
       pdf-reader
+      pg
+      pgvector
       rmagick
+      ruby-progressbar
       ruby_llm
+      rubyzip
+      searchkick
       shrine
 
 PATH
   remote: .
   specs:
-    ragdoll-rails (0.1.8)
+    ragdoll-rails (0.1.9)
       ragdoll
       rails (>= 8.0.2)
       sidekiq
@@ -99,7 +104,7 @@ GEM
       public_suffix (>= 2.0.2, < 7.0)
     afm (0.2.2)
     amazing_print (1.8.1)
-    async (2.27.0)
+    async (2.27.2)
       console (~> 1.29)
       fiber-annotation
       io-event (~> 1.11)
@@ -115,8 +120,9 @@ GEM
     claude-on-rails (0.2.0)
       claude_swarm (~> 0.1)
       rails (>= 6.0)
-    claude_swarm (0.3.8)
+    claude_swarm (0.3.10)
       claude-code-sdk-ruby (~> 0.1)
+      faraday-net_http_persistent (~> 2.0)
       faraday-retry (~> 2.0)
       fast-mcp-annotations (~> 1.5)
       ruby-mcp-client (~> 0.7)
@@ -191,6 +197,9 @@ GEM
       multipart-post (~> 2.0)
     faraday-net_http (3.4.1)
       net-http (>= 0.5.0)
+    faraday-net_http_persistent (2.3.1)
+      faraday (~> 2.5)
+      net-http-persistent (>= 4.0.4, < 5)
     faraday-retry (2.3.2)
       faraday (~> 2.0)
     fast-mcp-annotations (1.5.2)
@@ -207,6 +216,7 @@ GEM
     globalid (1.2.1)
       activesupport (>= 6.1)
     hashery (2.1.2)
+    hashie (5.0.0)
     i18n (1.14.7)
       concurrent-ruby (~> 1.0)
     io-console (0.8.1)
@@ -230,15 +240,18 @@ GEM
     mime-types (3.7.0)
       logger
       mime-types-data (~> 3.2025, >= 3.2025.0507)
-    mime-types-data (3.2025.0729)
+    mime-types-data (3.2025.0805)
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
     minitest (5.25.5)
+    multi_json (1.17.0)
     multipart-post (2.4.1)
     neighbor (0.6.0)
       activerecord (>= 7.1)
     net-http (0.6.0)
       uri
+    net-http-persistent (4.0.6)
+      connection_pool (~> 2.2, >= 2.2.4)
     net-imap (0.5.9)
       date
       net-protocol
@@ -269,12 +282,23 @@ GEM
     nokogiri (1.18.9-x86_64-linux-musl)
       racc (~> 1.4)
     observer (0.1.2)
+    opensearch-ruby (3.4.0)
+      faraday (>= 1.0, < 3)
+      multi_json (>= 1.0)
     pdf-reader (2.14.1)
       Ascii85 (>= 1.0, < 3.0, != 2.0.0)
       afm (~> 0.2.1)
       hashery (~> 2.0)
       ruby-rc4
       ttfunk
+    pg (1.6.1)
+    pg (1.6.1-aarch64-linux)
+    pg (1.6.1-aarch64-linux-musl)
+    pg (1.6.1-arm64-darwin)
+    pg (1.6.1-x86_64-darwin)
+    pg (1.6.1-x86_64-linux)
+    pg (1.6.1-x86_64-linux-musl)
+    pgvector (0.3.2)
     pkg-config (1.6.2)
     pp (0.6.2)
       prettyprint
@@ -332,6 +356,10 @@ GEM
     rmagick (6.1.2)
       observer (~> 0.1)
       pkg-config (~> 1.4)
+    rspec (3.13.1)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
     rspec-core (3.13.5)
       rspec-support (~> 3.13.0)
     rspec-expectations (3.13.5)
@@ -349,6 +377,7 @@ GEM
       event_stream_parser (>= 0.3.0, < 2.0.0)
       faraday (>= 1)
       faraday-multipart (>= 1)
+    ruby-progressbar (1.13.0)
     ruby-rc4 (0.1.5)
     ruby_llm (1.5.1)
       base64
@@ -360,6 +389,9 @@ GEM
       marcel (~> 1.0)
       zeitwerk (~> 2)
     rubyzip (2.4.1)
+    searchkick (5.5.2)
+      activemodel (>= 7.1)
+      hashie
     securerandom (0.4.1)
     shrine (3.6.0)
       content_disposition (~> 1.0)
@@ -407,6 +439,7 @@ DEPENDENCIES
   factory_bot_rails
   ragdoll!
   ragdoll-rails!
+  rspec
   rspec-core
   rspec-expectations
   rspec-mocks

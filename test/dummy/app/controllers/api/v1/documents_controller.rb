@@ -1,3 +1,5 @@
+require 'tempfile'
+
 class Api::V1::DocumentsController < Api::V1::BaseController
   before_action :set_document, only: [:show, :update, :destroy, :reprocess]
   
@@ -21,28 +23,50 @@ class Api::V1::DocumentsController < Api::V1::BaseController
   end
   
   def create
-    begin
-      client = Ragdoll::Client.new
-      
+    begin      
       if params[:file].present?
         # Handle file upload
         temp_path = Rails.root.join('tmp', 'uploads', params[:file].original_filename)
         FileUtils.mkdir_p(File.dirname(temp_path))
         File.binwrite(temp_path, params[:file].read)
         
-        document = client.add_file(temp_path.to_s, {
-          title: params[:title] || params[:file].original_filename,
-          metadata: params[:metadata] || {}
-        })
+        result = Ragdoll.add_document(path: temp_path.to_s)
+        
+        if result[:success]
+          document = Ragdoll::Document.find(result[:document_id])
+          # Update title and metadata if provided
+          updates = {}
+          updates[:title] = params[:title] if params[:title].present?
+          updates[:metadata] = params[:metadata] if params[:metadata].present?
+          document.update!(updates) if updates.any?
+        else
+          raise result[:error] || "Failed to add document"
+        end
         
         File.delete(temp_path) if File.exist?(temp_path)
       elsif params[:content].present?
-        # Handle text content
-        document = client.add_text(
-          params[:content],
-          title: params[:title] || "Text Document",
-          metadata: params[:metadata] || {}
-        )
+        # Handle text content by creating a temporary file
+        temp_file = Tempfile.new(['text_content', '.txt'])
+        temp_file.write(params[:content])
+        temp_file.rewind
+        
+        begin
+          result = Ragdoll.add_document(path: temp_file.path)
+          
+          if result[:success]
+            document = Ragdoll::Document.find(result[:document_id])
+            # Update title and metadata if provided
+            updates = {}
+            updates[:title] = params[:title] || "Text Document" if params[:title].present? || document.title.blank?
+            updates[:metadata] = params[:metadata] if params[:metadata].present?
+            document.update!(updates) if updates.any?
+          else
+            raise result[:error] || "Failed to add document"
+          end
+        ensure
+          temp_file.close
+          temp_file.unlink
+        end
       else
         return render_error("Either file or content must be provided")
       end

@@ -7,15 +7,25 @@ class Api::V1::SearchController < Api::V1::BaseController
     end
     
     begin
-      client = Ragdoll::Client.new
-      
       search_options = {
         limit: params[:limit]&.to_i || 10,
         threshold: params[:threshold]&.to_f || 0.7,
         use_usage_ranking: params[:use_usage_ranking] == 'true'
       }
       
-      results = client.search(query, **search_options)
+      search_response = Ragdoll.search(query: query, **search_options)
+      
+      # Handle both old format (array) and new format (hash with results)
+      results = if search_response.is_a?(Hash) && search_response.key?(:results)
+        search_response[:results]
+      else
+        # Fallback for old format
+        search_response || []
+      end
+      
+      # Extract statistics if available
+      statistics = search_response.is_a?(Hash) ? search_response[:statistics] : nil
+      execution_time_ms = search_response.is_a?(Hash) ? search_response[:execution_time_ms] : nil
       
       # Format results with additional metadata
       formatted_results = results.map do |result|
@@ -42,16 +52,27 @@ class Api::V1::SearchController < Api::V1::BaseController
           query: query,
           search_type: 'semantic',
           result_count: results.count,
-          model_name: Ragdoll.configuration.embedding_model
+          model_name: Ragdoll.configuration.models[:embedding][:text]&.to_s || 'text-embedding-3-small'
         )
       end
       
-      render json: {
+      response_data = {
         query: query,
         results: formatted_results,
         total_results: results.count,
         search_options: search_options
       }
+      
+      # Add enhanced search statistics if available
+      if statistics
+        response_data[:statistics] = statistics
+      end
+      
+      if execution_time_ms
+        response_data[:execution_time_ms] = execution_time_ms
+      end
+      
+      render json: response_data
       
     rescue => e
       render_error(e.message)

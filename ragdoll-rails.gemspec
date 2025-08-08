@@ -40,6 +40,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "amazing_print"
   spec.add_development_dependency "debug_me"
   spec.add_development_dependency "claude-on-rails"
+  spec.add_development_dependency "rspec"
   spec.add_development_dependency "rspec-core"
   spec.add_development_dependency "rspec-expectations"
   spec.add_development_dependency "rspec-mocks"

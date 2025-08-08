@@ -80,8 +80,41 @@
           <% if @detailed_results %>
             <span class="badge bg-primary"><%= @detailed_results.count %> results</span>
           <% end %>
+          <% if @execution_time_ms %>
+            <span class="badge bg-info ms-2"><%= @execution_time_ms %>ms</span>
+          <% end %>
         </div>
         <div class="card-body">
+          <% if @search_statistics %>
+            <div class="row mb-3">
+              <div class="col-12">
+                <div class="alert alert-info">
+                  <h6><i class="fas fa-chart-line"></i> Search Analysis</h6>
+                  <div class="row">
+                    <div class="col-md-3">
+                      <strong>Threshold:</strong> <%= @search_statistics[:threshold]&.round(3) || 'N/A' %>
+                    </div>
+                    <div class="col-md-3">
+                      <strong>Analyzed:</strong> <%= @search_statistics[:total_checked] || 0 %> embeddings
+                    </div>
+                    <div class="col-md-3">
+                      <strong>Range:</strong> <%= @search_statistics[:lowest]&.round(3) || 0 %> - <%= @search_statistics[:highest]&.round(3) || 0 %>
+                    </div>
+                    <div class="col-md-3">
+                      <strong>Average:</strong> <%= @search_statistics[:average]&.round(3) || 0 %>
+                    </div>
+                  </div>
+                  <% if @detailed_results.empty? && @search_statistics[:suggested_threshold] %>
+                    <div class="mt-2">
+                      <small class="text-muted">
+                        💡 Try lowering the threshold to <%= @search_statistics[:suggested_threshold]&.round(3) %> to see more results.
+                      </small>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
           <% if @error %>
             <div class="alert alert-danger">
               <i class="fas fa-exclamation-circle"></i> Error: <%= @error %>

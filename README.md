@@ -157,14 +157,12 @@ Ragdoll.add_text('Content', title: 'Guide')
 Ragdoll.add_directory('/knowledge-base', recursive: true)
 
 # Manage documents
-client = Ragdoll::Client.new
-client.update_document(123, title: 'New Title')
-client.delete_document(123)
-client.list_documents(limit: 50)
+Ragdoll.update_document(id: 123, title: 'New Title')
+Ragdoll.delete_document(id: 123)
+Ragdoll.list_documents(limit: 50)
 
 # Bulk operations
-client.reprocess_failed
-client.add_directory('/docs', recursive: true)
+Ragdoll.add_directory(path: '/docs', recursive: true)
 ```
 
 ## 🏗️ Rails Integration Examples
@@ -194,15 +192,11 @@ end
 
 ```ruby
 class SupportBot
-  def initialize
-    @ragdoll = Ragdoll::Client.new
-  end
-
   def answer_question(question, category: nil)
     filters = { document_type: 'pdf' } if category == 'manual'
 
-    context = @ragdoll.get_context(
-      question,
+    context = Ragdoll.get_context(
+      query: question,
       limit: 3,
       threshold: 0.8,
       filters: filters
@@ -229,10 +223,8 @@ end
 ```ruby
 class ProcessDocumentsJob < ApplicationJob
   def perform(file_paths)
-    ragdoll = Ragdoll::Client.new
-
     file_paths.each do |path|
-      ragdoll.add_file(path, process_immediately: true)
+      Ragdoll.add_document(path: path)
     end
   end
 end
@@ -434,12 +426,17 @@ healthy = Ragdoll.client.healthy?
 # spec/support/ragdoll_helpers.rb
 module RagdollHelpers
   def setup_test_documents
-    @ragdoll = Ragdoll::Client.new
-    @doc = @ragdoll.add_text(
-      "Rails is a web framework",
-      title: "Rails Guide",
-      process_immediately: true
-    )
+    temp_file = Tempfile.new(['test_doc', '.txt'])
+    temp_file.write("Rails is a web framework")
+    temp_file.rewind
+    
+    begin
+      result = Ragdoll.add_document(path: temp_file.path)
+      @doc = Ragdoll::Document.find(result[:document_id]) if result[:success]
+    ensure
+      temp_file.close
+      temp_file.unlink
+    end
   end
 end
 

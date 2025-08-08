@@ -27,20 +27,26 @@ class SearchController < ApplicationController
     
     if @query.present?
       begin
-        client = Ragdoll::Client.new
-        
-        # Perform search
+        # Perform search using high-level API
         search_options = {
           limit: @filters[:limit],
           threshold: @filters[:threshold],
           use_usage_ranking: params[:use_usage_ranking] == 'true'
         }
         
-        search_response = client.search(@query, **search_options)
+        search_response = Ragdoll.search(query: @query, **search_options)
         
-        # The client.search returns a hash with :query, :results, :total_results
-        # The actual results are in the :results key
-        @results = search_response.is_a?(Hash) ? search_response[:results] || search_response["results"] || [] : []
+        # Handle both old format (array) and new format (hash with results)
+        @results = if search_response.is_a?(Hash) && search_response.key?(:results)
+          search_response[:results]
+        else
+          # Fallback for old format
+          search_response || []
+        end
+        
+        # Extract search statistics if available
+        @search_statistics = search_response.is_a?(Hash) ? search_response[:statistics] : nil
+        @execution_time_ms = search_response.is_a?(Hash) ? search_response[:execution_time_ms] : nil
         
         # Get detailed results with documents
         @detailed_results = @results.map do |result|
@@ -61,7 +67,7 @@ class SearchController < ApplicationController
             query: @query,
             search_type: 'semantic',
             result_count: @results.count,
-            model_name: Ragdoll.configuration.embedding_model || 'demo-embedding-model'
+            model_name: Ragdoll.configuration.models[:embedding][:text]&.to_s || 'text-embedding-3-small'
           )
         end
         

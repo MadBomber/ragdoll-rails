@@ -3,7 +3,7 @@ require 'spec_helper'
 RSpec.describe 'Ragdoll Rails Generators' do
   describe 'generator structure' do
     it 'has the init generator file' do
-      generator_path = File.expand_path('../../../lib/generators/ragdoll/init/init_generator.rb', __FILE__)
+      generator_path = File.expand_path('../../../lib/generators/ragdoll/init_generator.rb', __FILE__)
       expect(File.exist?(generator_path)).to be true
     end
     

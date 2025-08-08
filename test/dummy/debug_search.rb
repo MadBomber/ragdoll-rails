@@ -1,3 +1,6 @@
+# Load Rails environment first
+require_relative 'config/environment'
+
 puts "Debugging search functionality..."
 
 # Check what embeddings exist
@@ -7,7 +10,6 @@ Ragdoll::Embedding.group(:model_name).count.each { |model, count| puts "  #{mode
 
 # Test with a lower threshold
 begin
-  client = Ragdoll::Client.new
   puts "\nTesting with lower threshold (0.1)..."
   
   query = "swagger"
@@ -17,7 +19,7 @@ begin
     use_usage_ranking: false
   }
   
-  search_response = client.search(query, **search_options)
+  search_response = Ragdoll.search(query: query, **search_options)
   puts "Results with threshold 0.1: #{search_response[:results].count}"
   
   if search_response[:results].any?
@@ -30,7 +32,7 @@ begin
   # Test with even lower threshold
   puts "\nTesting with threshold 0.01..."
   search_options[:threshold] = 0.01
-  search_response = client.search(query, **search_options)
+  search_response = Ragdoll.search(query: query, **search_options)
   puts "Results with threshold 0.01: #{search_response[:results].count}"
   
 rescue => e

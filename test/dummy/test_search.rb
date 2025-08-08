@@ -1,8 +1,10 @@
+# Load Rails environment first
+require_relative 'config/environment'
+
 puts "Testing search functionality..."
 
 begin
-  client = Ragdoll::Client.new
-  puts "Client created successfully"
+  puts "Using high-level Ragdoll API"
   
   query = "swagger"
   puts "Searching for: #{query}"
@@ -13,7 +15,7 @@ begin
     use_usage_ranking: false
   }
   
-  search_response = client.search(query, **search_options)
+  search_response = Ragdoll.search(query: query, **search_options)
   puts "Search response type: #{search_response.class}"
   puts "Search response: #{search_response.inspect}"
   

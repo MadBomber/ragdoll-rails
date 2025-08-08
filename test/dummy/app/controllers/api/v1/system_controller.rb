@@ -1,8 +1,7 @@
 class Api::V1::SystemController < Api::V1::BaseController
   def stats
     begin
-      client = Ragdoll::Client.new
-      ragdoll_stats = client.stats
+      ragdoll_stats = Ragdoll.stats
       
       system_stats = {
         ragdoll_version: Ragdoll::VERSION,
@@ -17,17 +16,30 @@ class Api::V1::SystemController < Api::V1::BaseController
         },
         
         configuration: {
-          llm_provider: Ragdoll.configuration.llm_provider,
-          embedding_provider: Ragdoll.configuration.embedding_provider,
-          embedding_model: Ragdoll.configuration.embedding_model,
-          chunk_size: Ragdoll.configuration.chunk_size,
-          chunk_overlap: Ragdoll.configuration.chunk_overlap,
-          max_search_results: Ragdoll.configuration.max_search_results,
-          search_similarity_threshold: Ragdoll.configuration.search_similarity_threshold,
-          enable_search_analytics: Ragdoll.configuration.enable_search_analytics,
-          enable_document_summarization: Ragdoll.configuration.enable_document_summarization,
-          enable_usage_tracking: Ragdoll.configuration.enable_usage_tracking,
-          usage_ranking_enabled: Ragdoll.configuration.usage_ranking_enabled
+          models: {
+            text_generation: Ragdoll.configuration.models[:text_generation][:default]&.to_s,
+            text_embedding: Ragdoll.configuration.models[:embedding][:text]&.to_s,
+            image_embedding: Ragdoll.configuration.models[:embedding][:image]&.to_s,
+            audio_embedding: Ragdoll.configuration.models[:embedding][:audio]&.to_s
+          },
+          processing: {
+            text_chunking_max_tokens: Ragdoll.configuration.processing[:text][:chunking][:max_tokens],
+            text_chunking_overlap: Ragdoll.configuration.processing[:text][:chunking][:overlap],
+            default_chunking_max_tokens: Ragdoll.configuration.processing[:default][:chunking][:max_tokens],
+            default_chunking_overlap: Ragdoll.configuration.processing[:default][:chunking][:overlap],
+            similarity_threshold: Ragdoll.configuration.processing[:search][:similarity_threshold],
+            max_results: Ragdoll.configuration.processing[:search][:max_results]
+          },
+          summarization: {
+            enabled: Ragdoll.configuration.summarization[:enable],
+            max_length: Ragdoll.configuration.summarization[:max_length],
+            min_content_length: Ragdoll.configuration.summarization[:min_content_length]
+          },
+          database: {
+            adapter: Ragdoll.configuration.database[:adapter],
+            database: Ragdoll.configuration.database[:database],
+            auto_migrate: Ragdoll.configuration.database[:auto_migrate]
+          }
         },
         
         performance_metrics: {
@@ -81,9 +93,8 @@ class Api::V1::SystemController < Api::V1::BaseController
   
   def embedding_service_healthy?
     begin
-      client = Ragdoll::Client.new
-      # Try a simple test - this might need adjustment based on your actual implementation
-      true
+      # Try a simple test using high-level API
+      Ragdoll.healthy?
     rescue
       false
     end
