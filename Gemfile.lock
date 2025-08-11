@@ -1,9 +1,10 @@
 PATH
   remote: ../ragdoll
   specs:
-    ragdoll (0.1.9)
+    ragdoll (0.1.10)
       activejob
       activerecord
+      debug_me
       docx
       neighbor
       opensearch-ruby
@@ -20,7 +21,7 @@ PATH
 PATH
   remote: .
   specs:
-    ragdoll-rails (0.1.9)
+    ragdoll-rails (0.1.10)
       ragdoll
       rails (>= 8.0.2)
       sidekiq
