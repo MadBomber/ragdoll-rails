@@ -1,5 +1,7 @@
-PATH
-  remote: ../ragdoll
+GIT
+  remote: https://github.com/madbomber/ragdoll.git
+  revision: 552e019703e5992f48f0d59b7eac81cc10f8c60c
+  branch: develop
   specs:
     ragdoll (0.1.10)
       activejob
@@ -121,7 +123,7 @@ GEM
     claude-on-rails (0.2.0)
       claude_swarm (~> 0.1)
       rails (>= 6.0)
-    claude_swarm (0.3.10)
+    claude_swarm (0.3.11)
       claude-code-sdk-ruby (~> 0.1)
       faraday-net_http_persistent (~> 2.0)
       faraday-retry (~> 2.0)
@@ -350,7 +352,7 @@ GEM
     rdoc (6.14.2)
       erb
       psych (>= 4.0.0)
-    redis-client (0.25.1)
+    redis-client (0.25.2)
       connection_pool
     reline (0.6.2)
       io-console (~> 0.5)
@@ -374,13 +376,13 @@ GEM
       faraday (~> 2.0)
       faraday-follow_redirects (~> 0.3)
       faraday-retry (~> 2.0)
-    ruby-openai (8.1.0)
+    ruby-openai (8.2.0)
       event_stream_parser (>= 0.3.0, < 2.0.0)
       faraday (>= 1)
       faraday-multipart (>= 1)
     ruby-progressbar (1.13.0)
     ruby-rc4 (0.1.5)
-    ruby_llm (1.5.1)
+    ruby_llm (1.6.0)
       base64
       event_stream_parser (~> 1)
       faraday (>= 1.10.0)
@@ -397,7 +399,7 @@ GEM
     shrine (3.6.0)
       content_disposition (~> 1.0)
       down (~> 5.1)
-    sidekiq (8.0.6)
+    sidekiq (8.0.7)
       connection_pool (>= 2.5.0)
       json (>= 2.9.0)
       logger (>= 1.6.2)

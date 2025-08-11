@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-# Local development override
-gem "ragdoll", path: "../ragdoll"
+# Development branch override
+gem "ragdoll", github: "madbomber/ragdoll", branch: "develop"
 
 gemspec
