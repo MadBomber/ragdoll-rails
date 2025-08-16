@@ -65,6 +65,8 @@ module Ragdoll
     
     def search
       ::Rails.logger.debug "🔍 Search called with params: #{params.inspect}"
+      ::Rails.logger.debug "🔍 Use similarity search: #{params[:use_similarity_search]}"
+      ::Rails.logger.debug "🔍 Use fulltext search: #{params[:use_fulltext_search]}"
       @query = params[:query]
       @filters = {
         document_type: params[:document_type],
@@ -86,6 +88,8 @@ module Ragdoll
           
           @detailed_results = []
           @below_threshold_results = []
+          @similarity_search_attempted = false
+          @similarity_threshold_used = @filters[:threshold]
           
           # Perform similarity search if enabled
           if use_similarity
@@ -129,16 +133,19 @@ module Ragdoll
                 end
               end
               
-              # Store threshold info for when no similarity results are found
-              @similarity_threshold_used = @filters[:threshold]
+              # Mark that similarity search was attempted
               @similarity_search_attempted = true
               
               # Always gather statistics about all possible matches when similarity search returns limited results
               similarity_results_count = @detailed_results.select { |r| r[:search_type] == 'similarity' }.count
               ::Rails.logger.debug "🔍 Similarity results found: #{similarity_results_count}"
               
-              # Gather statistics if we have few or no similarity results
-              if similarity_results_count < 5
+              # Gather statistics if we have no results OR if the threshold is relatively high (> 0.1)
+              # This ensures we provide helpful feedback even when the search succeeds with a lower threshold
+              should_gather_stats = similarity_results_count == 0 || @filters[:threshold] > 0.1
+              ::Rails.logger.debug "🔍 Should gather stats: #{should_gather_stats} (results: #{similarity_results_count}, threshold: #{@filters[:threshold]})"
+              
+              if should_gather_stats
                 ::Rails.logger.debug "🔍 Gathering below-threshold statistics..."
                 begin
                   # Search again with minimal threshold to get all potential matches
@@ -174,7 +181,7 @@ module Ragdoll
                         highest: all_similarities.max,
                         lowest: all_similarities.select { |s| s > 0 }.min,
                         average: all_similarities.sum / all_similarities.size.to_f,
-                        suggested_threshold: all_similarities.select { |s| s > 0 }.min
+                        suggested_threshold: all_similarities.select { |s| s > 0 }.min.round(3)
                       }
                       ::Rails.logger.debug "🔍 Below threshold stats: #{@below_threshold_stats.inspect}"
                     else
@@ -213,11 +220,14 @@ module Ragdoll
             
             fulltext_results = ::Ragdoll::Document.search_content(@query, **fulltext_params)
             
+            # Collect fulltext similarities for statistics
+            fulltext_similarities = []
             fulltext_results.each do |document|
               # Avoid duplicates if document was already found in similarity search
               unless @detailed_results.any? { |r| r[:document].id == document.id }
                 # Use the fulltext_similarity score from the enhanced search
                 fulltext_similarity = document.respond_to?(:fulltext_similarity) ? document.fulltext_similarity.to_f : 0.0
+                fulltext_similarities << fulltext_similarity if fulltext_similarity > 0
                 
                 @detailed_results << {
                   document: document,
@@ -225,6 +235,56 @@ module Ragdoll
                   search_type: 'fulltext',
                   similarity: fulltext_similarity
                 }
+              end
+            end
+            
+            # Gather fulltext statistics if we have few results OR if threshold is high (> 0.1)
+            # This ensures consistent feedback regardless of which search types are enabled
+            fulltext_results_count = @detailed_results.select { |r| r[:search_type] == 'fulltext' }.count
+            should_gather_fulltext_stats = fulltext_results_count == 0 || @filters[:threshold] > 0.1
+            
+            if should_gather_fulltext_stats && !@below_threshold_stats
+              ::Rails.logger.debug "🔍 Gathering fulltext below-threshold statistics..."
+              begin
+                # Search again with lower threshold to get all potential matches
+                stats_params = fulltext_params.merge(threshold: 0.0, limit: 100)
+                all_fulltext_results = ::Ragdoll::Document.search_content(@query, **stats_params)
+                
+                all_fulltext_similarities = []
+                all_fulltext_results.each do |document|
+                  similarity = document.respond_to?(:fulltext_similarity) ? document.fulltext_similarity.to_f : 0.0
+                  if similarity > 0
+                    all_fulltext_similarities << similarity
+                    # Store below-threshold results
+                    if similarity < @filters[:threshold]
+                      @below_threshold_results << {
+                        document_id: document.id,
+                        similarity: similarity,
+                        content: document.metadata&.dig('summary') || document.title || "No summary available"
+                      }
+                    end
+                  end
+                end
+                
+                ::Rails.logger.debug "🔍 Fulltext similarities collected: #{all_fulltext_similarities.inspect}"
+                ::Rails.logger.debug "🔍 Threshold: #{@filters[:threshold]}"
+                
+                # Calculate statistics for display
+                if all_fulltext_similarities.any?
+                  below_threshold_count = all_fulltext_similarities.count { |s| s < @filters[:threshold] && s > 0 }
+                  @below_threshold_stats = {
+                    count: below_threshold_count,
+                    highest: all_fulltext_similarities.max,
+                    lowest: all_fulltext_similarities.select { |s| s > 0 }.min,
+                    average: all_fulltext_similarities.sum / all_fulltext_similarities.size.to_f,
+                    suggested_threshold: all_fulltext_similarities.select { |s| s > 0 }.min.round(3)
+                  }
+                  ::Rails.logger.debug "🔍 Fulltext below threshold stats: #{@below_threshold_stats.inspect}"
+                else
+                  ::Rails.logger.debug "🔍 No fulltext similarities found in stats response"
+                end
+              rescue => stats_error
+                ::Rails.logger.error "Fulltext stats gathering error: #{stats_error.message}"
               end
             end
           end
@@ -277,6 +337,9 @@ module Ragdoll
           end
           
           ::Rails.logger.debug "🔍 Search completed successfully. Results count: #{@detailed_results.count}"
+          ::Rails.logger.debug "🔍 Similarity search attempted: #{@similarity_search_attempted}"
+          ::Rails.logger.debug "🔍 Below threshold stats: #{@below_threshold_stats.inspect}"
+          ::Rails.logger.debug "🔍 Threshold used: #{@similarity_threshold_used}"
           @search_performed = true
           
         rescue => e
