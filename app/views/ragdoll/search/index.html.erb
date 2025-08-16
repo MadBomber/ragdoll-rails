@@ -178,11 +178,32 @@
               <h5>No results found</h5>
               <p class="text-muted">Try adjusting your search query or filters.</p>
               
-              <% if @below_threshold_stats && @below_threshold_stats[:count] > 0 %>
+              <% if ::Rails.env.development? && @search_performed %>
+                <!-- Debug info -->
+                <div class="alert alert-secondary mt-2" style="font-size: 0.8rem;">
+                  <strong>Debug Info:</strong><br>
+                  Similarity search attempted: <%= @similarity_search_attempted %><br>
+                  Below threshold stats: <%= @below_threshold_stats.inspect %><br>
+                  Similarity threshold used: <%= @similarity_threshold_used %><br>
+                  Detailed results count: <%= @detailed_results&.count %><br>
+                </div>
+              <% end %>
+              
+              <% if @below_threshold_stats && @below_threshold_stats[:highest] %>
                 <div class="alert alert-warning mt-3">
-                  <h6><i class="fas fa-exclamation-triangle"></i> Results exist below your threshold!</h6>
+                  <h6><i class="fas fa-exclamation-triangle"></i> 
+                    <% if @below_threshold_stats[:count] && @below_threshold_stats[:count] > 0 %>
+                      Results exist below your threshold!
+                    <% else %>
+                      All results are below your threshold!
+                    <% end %>
+                  </h6>
                   <p class="mb-3">
-                    Found <strong><%= @below_threshold_stats[:count] %></strong> potential matches below your threshold of 
+                    <% if @below_threshold_stats[:count] && @below_threshold_stats[:count] > 0 %>
+                      Found <strong><%= @below_threshold_stats[:count] %></strong> potential matches below your threshold of 
+                    <% else %>
+                      All matches found are below your threshold of 
+                    <% end %>
                     <strong><%= number_with_precision(@similarity_threshold_used, precision: 3) %></strong>
                   </p>
                   
@@ -201,20 +222,23 @@
                     </div>
                   </div>
                   
+                  <% if @below_threshold_stats[:suggested_threshold] && @below_threshold_stats[:suggested_threshold] > 0 %>
                   <div class="d-grid gap-2">
-                    <a href="<%= ragdoll.search_path(
-                      query: @query,
-                      threshold: @below_threshold_stats[:suggested_threshold],
-                      document_type: @filters[:document_type],
-                      status: @filters[:status],
-                      limit: @filters[:limit],
-                      use_similarity_search: params[:use_similarity_search],
-                      use_fulltext_search: params[:use_fulltext_search]
-                    ) %>" class="btn btn-warning">
-                      <i class="fas fa-redo"></i> 
-                      Search again with threshold: <%= number_with_precision(@below_threshold_stats[:suggested_threshold], precision: 3) %>
-                    </a>
+                    <%= form_with url: ragdoll.search_path, method: :post, local: true do |form| %>
+                      <%= form.hidden_field :query, value: @query %>
+                      <%= form.hidden_field :threshold, value: @below_threshold_stats[:suggested_threshold] %>
+                      <%= form.hidden_field :document_type, value: @filters[:document_type] %>
+                      <%= form.hidden_field :status, value: @filters[:status] %>
+                      <%= form.hidden_field :limit, value: @filters[:limit] %>
+                      <%= form.hidden_field :use_similarity_search, value: params[:use_similarity_search] %>
+                      <%= form.hidden_field :use_fulltext_search, value: params[:use_fulltext_search] %>
+                      <%= form.button type: :submit, class: "btn btn-warning w-100" do %>
+                        <i class="fas fa-redo"></i> 
+                        Search again with threshold: <%= number_with_precision(@below_threshold_stats[:suggested_threshold], precision: 3) %>
+                      <% end %>
+                    <% end %>
                   </div>
+                  <% end %>
                 </div>
               <% elsif @similarity_search_attempted && @similarity_stats && @similarity_stats[:total_similarities_calculated] && @similarity_stats[:total_similarities_calculated] > 0 %>
                 <div class="alert alert-info mt-3">

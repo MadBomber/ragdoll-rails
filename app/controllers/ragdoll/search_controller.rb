@@ -106,7 +106,7 @@ module Ragdoll
                 search_params[:status] = @filters[:status]
               end
               
-              search_response = ::Ragdoll.search(search_params)
+              search_response = ::Ragdoll.search(**search_params)
               
               # The search returns a hash with :results and :statistics
               @results = search_response.is_a?(Hash) ? search_response[:results] || [] : []
@@ -133,12 +133,19 @@ module Ragdoll
               @similarity_threshold_used = @filters[:threshold]
               @similarity_search_attempted = true
               
-              # If no results found, also search with a very low threshold to get statistics
-              if @detailed_results.empty? || @detailed_results.select { |r| r[:search_type] == 'similarity' }.empty?
+              # Always gather statistics about all possible matches when similarity search returns limited results
+              similarity_results_count = @detailed_results.select { |r| r[:search_type] == 'similarity' }.count
+              ::Rails.logger.debug "🔍 Similarity results found: #{similarity_results_count}"
+              
+              # Gather statistics if we have few or no similarity results
+              if similarity_results_count < 5
+                ::Rails.logger.debug "🔍 Gathering below-threshold statistics..."
                 begin
                   # Search again with minimal threshold to get all potential matches
                   stats_params = search_params.merge(threshold: 0.0, limit: 100)
-                  stats_response = ::Ragdoll.search(stats_params)
+                  stats_response = ::Ragdoll.search(**stats_params)
+                  
+                  ::Rails.logger.debug "🔍 Stats response: #{stats_response.inspect}"
                   
                   if stats_response.is_a?(Hash) && stats_response[:results]
                     all_similarities = []
@@ -156,16 +163,25 @@ module Ragdoll
                       end
                     end
                     
+                    ::Rails.logger.debug "🔍 All similarities collected: #{all_similarities.inspect}"
+                    ::Rails.logger.debug "🔍 Threshold: #{@filters[:threshold]}"
+                    
                     # Calculate statistics for display
                     if all_similarities.any?
+                      below_threshold_count = all_similarities.count { |s| s < @filters[:threshold] && s > 0 }
                       @below_threshold_stats = {
-                        count: all_similarities.count { |s| s < @filters[:threshold] && s > 0 },
+                        count: below_threshold_count,
                         highest: all_similarities.max,
                         lowest: all_similarities.select { |s| s > 0 }.min,
                         average: all_similarities.sum / all_similarities.size.to_f,
                         suggested_threshold: all_similarities.select { |s| s > 0 }.min
                       }
+                      ::Rails.logger.debug "🔍 Below threshold stats: #{@below_threshold_stats.inspect}"
+                    else
+                      ::Rails.logger.debug "🔍 No similarities found in stats response"
                     end
+                  else
+                    ::Rails.logger.debug "🔍 Stats response was not in expected format or had no results"
                   end
                 rescue => stats_error
                   ::Rails.logger.error "Stats gathering error: #{stats_error.message}"
