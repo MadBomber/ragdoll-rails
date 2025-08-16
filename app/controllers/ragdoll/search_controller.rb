@@ -5,8 +5,7 @@ module Ragdoll
     skip_before_action :verify_authenticity_token, only: [:search]
     
     def index
-      # Load recent searches for sidebar
-      @recent_searches = ::Ragdoll::Search.order(created_at: :desc).limit(10)
+      # Load popular queries for sidebar
       @popular_queries = ::Ragdoll::Search.group(:query).count.sort_by { |query, count| -count }.first(10).to_h
       
       # Check if we're reconstructing a previous search
@@ -76,8 +75,7 @@ module Ragdoll
       }
       ::Rails.logger.debug "🔍 Query: #{@query.inspect}, Filters: #{@filters.inspect}"
       
-      # Initialize data needed for the view sidebar - load recent searches
-      @recent_searches = ::Ragdoll::Search.order(created_at: :desc).limit(10)
+      # Initialize data needed for the view sidebar - load popular queries
       @popular_queries = ::Ragdoll::Search.group(:query).count.sort_by { |query, count| -count }.first(10).to_h
       
       if @query.present?
