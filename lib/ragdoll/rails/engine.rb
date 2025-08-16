@@ -45,20 +45,20 @@ module Ragdoll
         end
         
         # Configure ActionCable for the engine
-        # Load cable configuration from engine's config/cable.yml
-        cable_config_file = File.join(root, 'config', 'cable.yml')
-        if File.exist?(cable_config_file)
-          cable_config = ::Rails.application.config_for(cable_config_file)
-          if cable_config
-            # Apply cable configuration to the main application
-            app.config.action_cable.mount_path ||= '/cable'
-            
-            # Set adapter if not already configured
-            unless app.config.action_cable.adapter
-              app.config.action_cable.adapter = cable_config['adapter']
-              app.config.action_cable.url = cable_config['url'] if cable_config['url']
-              app.config.action_cable.channel_prefix = cable_config['channel_prefix'] if cable_config['channel_prefix']
-            end
+        # Provide default ActionCable configuration if not already set
+        app.config.action_cable.mount_path ||= '/cable'
+        
+        # Set default adapter if not already configured
+        unless app.config.action_cable.adapter
+          if ::Rails.env.development?
+            app.config.action_cable.adapter = 'redis'
+            app.config.action_cable.url = 'redis://localhost:6379/0'
+          elsif ::Rails.env.test?
+            app.config.action_cable.adapter = 'test'
+          elsif ::Rails.env.production?
+            app.config.action_cable.adapter = 'redis'
+            app.config.action_cable.url = ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" }
+            app.config.action_cable.channel_prefix = 'ragdoll_rails_production'
           end
         end
       end

@@ -240,10 +240,10 @@ module Ragdoll
     end
 
     def upload_async
-      Rails.logger.info "upload_async called with params: #{params.inspect}"
-      Rails.logger.info "Session ID: #{session.id}"
-      Rails.logger.info "Request ID: #{request.request_id}"
-      Rails.logger.info "Temp Session ID: #{params[:temp_session_id]}"
+      logger.info "upload_async called with params: #{params.inspect}"
+      logger.info "Session ID: #{session.id}"
+      logger.info "Request ID: #{request.request_id}"
+      logger.info "Temp Session ID: #{params[:temp_session_id]}"
       
       if params[:ragdoll_document] && params[:ragdoll_document][:files].present?
         # Priority: temp_session_id from frontend, then session ID, then request ID as fallback
@@ -254,10 +254,10 @@ module Ragdoll
                      else
                        request.request_id
                      end
-        Rails.logger.info "Using session_id: #{session_id} (source: #{params[:temp_session_id].present? ? 'temp_session_id' : session.id.present? ? 'session' : 'request'})"
+        logger.info "Using session_id: #{session_id} (source: #{params[:temp_session_id].present? ? 'temp_session_id' : session.id.present? ? 'session' : 'request'})"
         uploaded_files = params[:ragdoll_document][:files]
         
-        Rails.logger.info "Files received: #{uploaded_files.inspect}"
+        logger.info "Files received: #{uploaded_files.inspect}"
         
         # Ensure uploaded_files is always an array
         uploaded_files = [uploaded_files] unless uploaded_files.is_a?(Array)
@@ -268,7 +268,7 @@ module Ragdoll
         uploaded_files.each_with_index do |file, index|
           next unless file.respond_to?(:original_filename)
           
-          Rails.logger.info "Processing file #{index + 1}: #{file.original_filename}"
+          logger.info "Processing file #{index + 1}: #{file.original_filename}"
           
           begin
             # Generate unique file ID
@@ -279,19 +279,19 @@ module Ragdoll
             FileUtils.mkdir_p(File.dirname(temp_path))
             File.binwrite(temp_path, file.read)
             
-            Rails.logger.info "File saved to: #{temp_path}"
+            logger.info "File saved to: #{temp_path}"
             
             # Try to queue background job first, fallback to direct processing
             begin
               if defined?(::Ragdoll::ProcessFileJob)
                 ::Ragdoll::ProcessFileJob.perform_later(file_id, session_id, file.original_filename, temp_path.to_s)
-                Rails.logger.info "Job queued for file: #{file_id}"
+                logger.info "Job queued for file: #{file_id}"
                 results << { file: file.original_filename, status: 'queued' }
               else
                 raise "ProcessFileJob not available"
               end
             rescue => job_error
-              Rails.logger.warn "Background job failed, processing directly: #{job_error.message}"
+              logger.warn "Background job failed, processing directly: #{job_error.message}"
               
               # Process directly if job system is not available
               result = ::Ragdoll.add_document(path: temp_path.to_s)
@@ -303,7 +303,7 @@ module Ragdoll
                   status: 'completed_sync',
                   document_id: document.id
                 }
-                Rails.logger.info "File processed synchronously: #{file.original_filename}"
+                logger.info "File processed synchronously: #{file.original_filename}"
               else
                 results << { 
                   file: file.original_filename, 
@@ -318,7 +318,7 @@ module Ragdoll
             
             processed_count += 1
           rescue => file_error
-            Rails.logger.error "Error processing file #{file.original_filename}: #{file_error.message}"
+            logger.error "Error processing file #{file.original_filename}: #{file_error.message}"
             results << { 
               file: file.original_filename, 
               status: 'failed',
@@ -327,7 +327,7 @@ module Ragdoll
           end
         end
         
-        Rails.logger.info "Returning success response for #{processed_count} files"
+        logger.info "Returning success response for #{processed_count} files"
         render json: { 
           success: true, 
           session_id: session_id,
@@ -335,12 +335,12 @@ module Ragdoll
           message: "#{processed_count} file(s) processed" 
         }
       else
-        Rails.logger.error "No files provided in upload_async"
+        logger.error "No files provided in upload_async"
         render json: { success: false, error: "No files provided" }, status: :bad_request
       end
     rescue => e
-      Rails.logger.error "Error in upload_async: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      logger.error "Error in upload_async: #{e.message}"
+      logger.error e.backtrace.join("\n")
       render json: { success: false, error: e.message }, status: :internal_server_error
     end
     
