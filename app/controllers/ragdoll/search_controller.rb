@@ -110,7 +110,7 @@ module Ragdoll
                 search_params[:status] = @filters[:status]
               end
               
-              search_response = ::Ragdoll.search(**search_params)
+              search_response = ::Ragdoll.search(**search_params.merge(track_search: false))
               
               # The search returns a hash with :results and :statistics
               @results = search_response.is_a?(Hash) ? search_response[:results] || [] : []
