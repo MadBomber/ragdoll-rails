@@ -35,6 +35,9 @@ module Ragdoll
         # Configure Rails-specific functionality
         # Core functionality is provided by the ragdoll gem
         
+        # Ensure ViewComponent autoloading for engine components
+        app.config.autoload_paths += ["#{root}/app/components"]
+        
         # Configure ViewComponent
         if ::Rails.env.development? && app.config.respond_to?(:view_component)
           app.config.view_component.preview_paths ||= []

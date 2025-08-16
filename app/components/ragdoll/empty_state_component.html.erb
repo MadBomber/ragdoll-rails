@@ -1,0 +1,12 @@
+<div class="text-center py-5">
+  <% if icon %>
+    <i class="<%= icon %> fa-4x text-muted mb-4"></i>
+  <% end %>
+  
+  <h3 class="text-muted mb-3"><%= title %></h3>
+  <p class="text-muted mb-4"><%= message %></p>
+  
+  <% if action_path && action_text %>
+    <%= link_to action_text, action_path, class: "btn btn-primary" %>
+  <% end %>
+</div>
