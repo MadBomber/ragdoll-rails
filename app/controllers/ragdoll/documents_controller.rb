@@ -40,7 +40,7 @@ module Ragdoll
             next unless file.respond_to?(:original_filename)
             
             # Save uploaded file temporarily
-            temp_path = Rails.root.join('tmp', 'uploads', file.original_filename)
+            temp_path = ::Rails.root.join('tmp', 'uploads', file.original_filename)
             FileUtils.mkdir_p(File.dirname(temp_path))
             File.binwrite(temp_path, file.read)
             
@@ -67,7 +67,7 @@ module Ragdoll
       elsif params[:ragdoll_document] && params[:ragdoll_document][:text_content].present?
         begin
           # For text content, we need to save it as a file first since Ragdoll.add_document expects a file
-          temp_path = Rails.root.join('tmp', 'uploads', "#{SecureRandom.hex(8)}.txt")
+          temp_path = ::Rails.root.join('tmp', 'uploads', "#{SecureRandom.hex(8)}.txt")
           FileUtils.mkdir_p(File.dirname(temp_path))
           File.write(temp_path, params[:ragdoll_document][:text_content])
           
@@ -275,7 +275,7 @@ module Ragdoll
             file_id = "#{session_id}_#{index}_#{Time.current.to_i}"
             
             # Save uploaded file temporarily
-            temp_path = Rails.root.join('tmp', 'uploads', "#{file_id}_#{file.original_filename}")
+            temp_path = ::Rails.root.join('tmp', 'uploads', "#{file_id}_#{file.original_filename}")
             FileUtils.mkdir_p(File.dirname(temp_path))
             File.binwrite(temp_path, file.read)
             
