@@ -13,6 +13,7 @@ Ragdoll.init = function() {
   Ragdoll.initTooltips();
   Ragdoll.initFormValidation();
   Ragdoll.initSearchEnhancements();
+  Ragdoll.initActionCable();
 };
 
 // Initialize Bootstrap tooltips
@@ -57,6 +58,26 @@ Ragdoll.initSearchEnhancements = function() {
       }
     });
   });
+};
+
+// ActionCable initialization
+Ragdoll.initActionCable = function() {
+  if (typeof ActionCable !== 'undefined') {
+    console.log('🔗 Initializing ActionCable for Ragdoll Engine');
+    
+    // Initialize App namespace if not exists
+    if (!window.App) {
+      window.App = {};
+    }
+    
+    // Create ActionCable consumer if not exists
+    if (!window.App.cable) {
+      window.App.cable = ActionCable.createConsumer('/cable');
+      console.log('📡 ActionCable consumer created for Ragdoll');
+    }
+  } else {
+    console.warn('⚠️ ActionCable not available - real-time features will be limited');
+  }
 };
 
 // Utility functions

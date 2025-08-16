@@ -279,7 +279,7 @@ module Ragdoll
           Rails.logger.info "File saved to: #{temp_path}"
           
           # Queue background job
-          ProcessFileJob.perform_later(file_id, session_id, file.original_filename, temp_path.to_s)
+          ::Ragdoll::ProcessFileJob.perform_later(file_id, session_id, file.original_filename, temp_path.to_s)
           Rails.logger.info "Job queued for file: #{file_id}"
           
           processed_count += 1
