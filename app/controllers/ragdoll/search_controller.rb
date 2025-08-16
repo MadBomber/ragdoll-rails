@@ -7,7 +7,7 @@ module Ragdoll
     def index
       # Load recent searches for sidebar
       @recent_searches = ::Ragdoll::Search.order(created_at: :desc).limit(10)
-      @popular_queries = {}
+      @popular_queries = ::Ragdoll::Search.group(:query).count.sort_by { |query, count| -count }.first(10).to_h
       
       # Check if we're reconstructing a previous search
       if params[:search_id].present?
@@ -78,7 +78,7 @@ module Ragdoll
       
       # Initialize data needed for the view sidebar - load recent searches
       @recent_searches = ::Ragdoll::Search.order(created_at: :desc).limit(10)
-      @popular_queries = {}
+      @popular_queries = ::Ragdoll::Search.group(:query).count.sort_by { |query, count| -count }.first(10).to_h
       
       if @query.present?
         begin
