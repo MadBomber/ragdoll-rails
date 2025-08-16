@@ -1,0 +1,76 @@
+<div class="table-responsive">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th width="30">
+          <input type="checkbox" id="select-all-table" class="form-check-input" onclick="toggleAll(this)">
+        </th>
+        <th>Title</th>
+        <th>Type</th>
+        <th>Size</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th width="150">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% documents.each do |document| %>
+        <tr>
+          <td>
+            <input type="checkbox" class="document-checkbox form-check-input" value="<%= document.id %>">
+          </td>
+          <td>
+            <%= link_to document.title, helpers.ragdoll.document_path(document), class: "text-decoration-none" %>
+          </td>
+          <td>
+            <small class="text-muted">
+              <i class="fas fa-file"></i> <%= document.document_type %>
+            </small>
+          </td>
+          <td>
+            <small class="text-muted">
+              <%= number_to_human_size(document.metadata['file_size']) if document.metadata && document.metadata['file_size'] %>
+            </small>
+          </td>
+          <td>
+            <span class="badge bg-<%= document.status == 'processed' ? 'success' : document.status == 'failed' ? 'danger' : 'warning' %>">
+              <%= document.status.humanize %>
+            </span>
+          </td>
+          <td>
+            <small class="text-muted">
+              <%= time_ago_in_words(document.created_at) %> ago
+            </small>
+          </td>
+          <td>
+            <div class="btn-group btn-group-sm" role="group">
+              <%= link_to helpers.ragdoll.document_path(document), 
+                          class: "btn btn-outline-primary", 
+                          title: "View",
+                          data: { bs_toggle: "tooltip" } do %>
+                <i class="fas fa-eye"></i>
+              <% end %>
+              <%= link_to helpers.ragdoll.edit_document_path(document), 
+                          class: "btn btn-outline-secondary", 
+                          title: "Edit",
+                          data: { bs_toggle: "tooltip" } do %>
+                <i class="fas fa-edit"></i>
+              <% end %>
+              <%= link_to helpers.ragdoll.document_path(document), 
+                          method: :delete,
+                          class: "btn btn-outline-danger",
+                          title: "Delete",
+                          data: { 
+                            confirm: "Are you sure you want to delete '#{document.title}'?", 
+                            turbo_method: :delete,
+                            bs_toggle: "tooltip"
+                          } do %>
+                <i class="fas fa-trash"></i>
+              <% end %>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

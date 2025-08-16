@@ -40,22 +40,40 @@
   <div class="row">
     <div class="col-12">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <div class="d-flex align-items-center">
-            <input type="checkbox" id="select-all" class="form-check-input me-2" onclick="toggleAll()">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-list"></i> Document List</h5>
-          </div>
-          <div>
-            <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
-              <i class="fas fa-trash"></i> Delete Selected
-            </button>
-            <button class="btn btn-outline-warning btn-sm" onclick="bulkReprocess()">
-              <i class="fas fa-sync"></i> Reprocess Selected
-            </button>
+            <div class="d-flex align-items-center gap-2">
+              <!-- View Toggle Buttons -->
+              <div class="btn-group btn-group-sm me-3" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-secondary" id="card-view-btn" onclick="switchToCardView()">
+                  <i class="fas fa-th-large"></i> Cards
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="table-view-btn" onclick="switchToTableView()">
+                  <i class="fas fa-table"></i> Table
+                </button>
+              </div>
+              
+              <!-- Bulk Action Buttons -->
+              <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
+                <i class="fas fa-trash"></i> Delete Selected
+              </button>
+              <button class="btn btn-outline-warning btn-sm" onclick="bulkReprocess()">
+                <i class="fas fa-sync"></i> Reprocess Selected
+              </button>
+            </div>
           </div>
         </div>
         <div class="card-body">
-          <%= render Ragdoll::DocumentListComponent.new(documents: @documents) %>
+          <!-- Card View -->
+          <div id="card-view" style="display: block;">
+            <%= render Ragdoll::DocumentListComponent.new(documents: @documents) %>
+          </div>
+          
+          <!-- Table View -->
+          <div id="table-view" style="display: none;">
+            <%= render Ragdoll::DocumentTableComponent.new(documents: @documents) %>
+          </div>
         </div>
       </div>
     </div>
@@ -76,13 +94,107 @@
 
 <%= content_for :javascript do %>
 <script>
-function toggleAll() {
-  const selectAll = document.getElementById('select-all');
-  const checkboxes = document.querySelectorAll('.document-checkbox');
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAll.checked;
-  });
+// View switching functions
+function switchToCardView() {
+  document.getElementById('card-view').style.display = 'block';
+  document.getElementById('table-view').style.display = 'none';
+  document.getElementById('card-view-btn').classList.add('active');
+  document.getElementById('table-view-btn').classList.remove('active');
+  localStorage.setItem('ragdoll-document-view', 'card');
 }
+
+function switchToTableView() {
+  document.getElementById('card-view').style.display = 'none';
+  document.getElementById('table-view').style.display = 'block';
+  document.getElementById('table-view-btn').classList.add('active');
+  document.getElementById('card-view-btn').classList.remove('active');
+  localStorage.setItem('ragdoll-document-view', 'table');
+}
+
+// Attach event listeners to document checkboxes
+function attachCheckboxListeners() {
+  document.querySelectorAll('.document-checkbox').forEach(checkbox => {
+    checkbox.removeEventListener('change', updateSelectAllState); // Remove first to avoid duplicates
+    checkbox.addEventListener('change', updateSelectAllState);
+  });
+  updateSelectAllState(); // Initialize state
+}
+
+// Initialize view based on saved preference
+document.addEventListener('DOMContentLoaded', function() {
+  const savedView = localStorage.getItem('ragdoll-document-view') || 'card';
+  if (savedView === 'table') {
+    switchToTableView();
+  } else {
+    switchToCardView();
+  }
+  
+  // Attach listeners after view is set
+  setTimeout(attachCheckboxListeners, 100);
+});
+
+function toggleAll(source) {
+  // Get all document checkboxes
+  const checkboxes = document.querySelectorAll('.document-checkbox');
+  const selectAllCard = document.getElementById('select-all');
+  const selectAllTable = document.getElementById('select-all-table');
+  
+  // Set all checkboxes to match the source checkbox state
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = source.checked;
+  });
+  
+  // Sync both select-all checkboxes
+  if (selectAllCard) {
+    selectAllCard.checked = source.checked;
+    selectAllCard.indeterminate = false;
+  }
+  if (selectAllTable) {
+    selectAllTable.checked = source.checked;
+    selectAllTable.indeterminate = false;
+  }
+}
+
+function updateSelectAllState() {
+  // Get all document checkboxes
+  const checkboxes = document.querySelectorAll('.document-checkbox');
+  const selectAllCard = document.getElementById('select-all');
+  const selectAllTable = document.getElementById('select-all-table');
+  
+  if (checkboxes.length === 0) return;
+  
+  // Count checked boxes
+  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+  
+  // Determine state
+  let isChecked = false;
+  let isIndeterminate = false;
+  
+  if (checkedCount === 0) {
+    // None checked
+    isChecked = false;
+    isIndeterminate = false;
+  } else if (checkedCount === checkboxes.length) {
+    // All checked
+    isChecked = true;
+    isIndeterminate = false;
+  } else {
+    // Some checked
+    isChecked = false;
+    isIndeterminate = true;
+  }
+  
+  // Update both select-all checkboxes
+  if (selectAllCard) {
+    selectAllCard.checked = isChecked;
+    selectAllCard.indeterminate = isIndeterminate;
+  }
+  if (selectAllTable) {
+    selectAllTable.checked = isChecked;
+    selectAllTable.indeterminate = isIndeterminate;
+  }
+}
+
 
 function reprocessDocument(documentId) {
   if (confirm('Are you sure you want to reprocess this document?')) {
