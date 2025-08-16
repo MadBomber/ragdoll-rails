@@ -1,0 +1,24 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container">
+    <%= link_to brand_path, class: "navbar-brand d-flex align-items-center" do %>
+      <i class="fas fa-robot me-2"></i>
+      <%= brand_text %>
+    <% end %>
+    
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto">
+        <% nav_items.each do |item| %>
+          <li class="nav-item">
+            <%= link_to item[:path], class: nav_link_classes(item[:path]) do %>
+              <i class="<%= item[:icon] %>"></i> <%= item[:text] %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+</nav>

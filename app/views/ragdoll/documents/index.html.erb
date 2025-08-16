@@ -1,0 +1,187 @@
+<% content_for :title, "Documents - Ragdoll Engine" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-file-alt"></i> Documents</h1>
+      <%= link_to "Add Document", ragdoll.new_document_path, class: "btn btn-primary" %>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-filter"></i> Filters</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: ragdoll.documents_path, method: :get, local: true, class: "row g-3" do |form| %>
+          <div class="col-md-3">
+            <%= form.text_field :search, placeholder: "Search documents...", value: params[:search], class: "form-control" %>
+          </div>
+          <div class="col-md-3">
+            <%= form.select :document_type, options_for_select([["All Types", ""]] + @document_types.map { |type| [type.titleize, type] }, params[:document_type]), {}, { class: "form-select" } %>
+          </div>
+          <div class="col-md-3">
+            <%= form.select :status, options_for_select([["All Statuses", ""]] + @statuses.map { |status| [status.titleize, status] }, params[:status]), {}, { class: "form-select" } %>
+          </div>
+          <div class="col-md-3">
+            <%= form.submit "Filter", class: "btn btn-outline-primary" %>
+            <%= link_to "Clear", ragdoll.documents_path, class: "btn btn-outline-secondary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @documents.any? %>
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5><i class="fas fa-list"></i> Document List</h5>
+          <div>
+            <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
+              <i class="fas fa-trash"></i> Delete Selected
+            </button>
+            <button class="btn btn-outline-warning btn-sm" onclick="bulkReprocess()">
+              <i class="fas fa-sync"></i> Reprocess Selected
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <%= render Ragdoll::DocumentListComponent.new(documents: @documents) %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% else %>
+  <div class="row">
+    <div class="col-12">
+      <%= render Ragdoll::EmptyStateComponent.new(
+        title: "No documents found",
+        message: "Get started by adding your first document to the system.",
+        icon: "fas fa-file-alt",
+        action_path: ragdoll.new_document_path,
+        action_text: "Add Document"
+      ) %>
+    </div>
+  </div>
+<% end %>
+
+<%= content_for :javascript do %>
+<script>
+function toggleAll() {
+  const selectAll = document.getElementById('select-all');
+  const checkboxes = document.querySelectorAll('.document-checkbox');
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAll.checked;
+  });
+}
+
+function reprocessDocument(documentId) {
+  if (confirm('Are you sure you want to reprocess this document?')) {
+    // Create a form with proper CSRF token for individual reprocess action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `<%= ragdoll.documents_path %>/${documentId}/reprocess`;
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function bulkDelete() {
+  const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one document to delete.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete ${checkedBoxes.length} selected documents?`)) {
+    // Create a new form with proper CSRF token for delete action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<%= ragdoll.bulk_delete_documents_path %>';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add selected document IDs
+    checkedBoxes.forEach(checkbox => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'document_ids[]';
+      input.value = checkbox.value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function bulkReprocess() {
+  const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one document to reprocess.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to reprocess ${checkedBoxes.length} selected documents?`)) {
+    // Create a new form with proper CSRF token for reprocess action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<%= ragdoll.bulk_reprocess_documents_path %>';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add selected document IDs
+    checkedBoxes.forEach(checkbox => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'document_ids[]';
+      input.value = checkbox.value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function () {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl, {
+      delay: { "show": 500, "hide": 100 },
+      placement: 'top',
+      boundary: 'viewport',
+      fallbackPlacements: ['top', 'bottom']
+    });
+  });
+});
+</script>
+<% end %>

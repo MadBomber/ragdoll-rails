@@ -35,6 +35,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "ragdoll"
   spec.add_dependency "rails", ">= 8.0.2"
   spec.add_dependency "sidekiq"
+  spec.add_dependency "view_component", ">= 2.0"
 
   # Development dependencies
   spec.add_development_dependency "amazing_print"

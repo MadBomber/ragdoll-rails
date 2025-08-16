@@ -1,0 +1,84 @@
+/*
+ * Ragdoll Rails Engine Stylesheet
+ * This file provides custom styling for the Ragdoll Engine interface
+ */
+
+/* Custom styling for Ragdoll components */
+.ragdoll-brand {
+  font-weight: bold;
+}
+
+.ragdoll-stats-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.ragdoll-stats-card:hover {
+  transform: translateY(-2px);
+}
+
+.ragdoll-search-form {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.ragdoll-document-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.ragdoll-similarity-score {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+}
+
+/* Loading states */
+.ragdoll-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.ragdoll-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #007bff;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: ragdoll-spin 1s linear infinite;
+}
+
+@keyframes ragdoll-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Component specific styles */
+.navbar.ragdoll-navbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card.ragdoll-card {
+  border: 1px solid #e9ecef;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.alert.ragdoll-alert {
+  border-radius: 6px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .ragdoll-stats-card {
+    margin-bottom: 1rem;
+  }
+  
+  .ragdoll-search-form {
+    padding: 0.75rem;
+  }
+}
