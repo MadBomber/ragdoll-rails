@@ -178,17 +178,6 @@
               <h5>No results found</h5>
               <p class="text-muted">Try adjusting your search query or filters.</p>
               
-              <% if ::Rails.env.development? && @search_performed %>
-                <!-- Debug info -->
-                <div class="alert alert-secondary mt-2" style="font-size: 0.8rem;">
-                  <strong>Debug Info:</strong><br>
-                  Similarity search attempted: <%= @similarity_search_attempted %><br>
-                  Below threshold stats: <%= @below_threshold_stats.inspect %><br>
-                  Similarity threshold used: <%= @similarity_threshold_used %><br>
-                  Detailed results count: <%= @detailed_results&.count %><br>
-                </div>
-              <% end %>
-              
               <% if @below_threshold_stats && @below_threshold_stats[:highest] %>
                 <div class="alert alert-warning mt-3">
                   <h6><i class="fas fa-exclamation-triangle"></i> 
