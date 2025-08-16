@@ -34,6 +34,7 @@ Gem::Specification.new do |spec|
   # Core dependencies
   spec.add_dependency "ragdoll"
   spec.add_dependency "rails", ">= 8.0.2"
+  spec.add_dependency "actioncable", ">= 8.0.2"
   spec.add_dependency "sidekiq"
   spec.add_dependency "view_component", ">= 2.0"
 

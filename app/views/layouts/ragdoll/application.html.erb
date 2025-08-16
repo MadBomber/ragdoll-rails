@@ -19,6 +19,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
+    <!-- ActionCable from CDN with fallback handling -->
+    <script src="https://cdn.jsdelivr.net/gh/rails/rails@7-1-stable/actioncable/app/assets/javascripts/action_cable.js"></script>
+    
     <!-- Fallback CSS for when CDN is blocked -->
     <style>
       .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
@@ -72,11 +75,75 @@
       <%= yield %>
     </main>
 
+    <!-- JavaScript with fallback support -->
+    <script>
+      // Check if CDN resources loaded, provide fallbacks if not
+      console.log('🔧 Checking JavaScript dependencies...');
+      
+      // ActionCable fallback and App global setup
+      window.App = window.App || {};
+      
+      if (typeof ActionCable === 'undefined') {
+        console.warn('ActionCable not loaded from CDN, using minimal fallback');
+        window.ActionCable = {
+          createConsumer: function(url) {
+            console.log('ActionCable fallback: WebSocket functionality disabled');
+            return {
+              subscriptions: {
+                create: function(channel, callbacks) {
+                  console.log('ActionCable fallback: Channel subscription disabled', channel);
+                  if (callbacks && callbacks.connected) {
+                    setTimeout(() => callbacks.connected(), 100);
+                  }
+                  return {
+                    unsubscribe: function() { console.log('ActionCable fallback: Unsubscribe'); }
+                  };
+                }
+              },
+              disconnect: function() { console.log('ActionCable fallback: Disconnect'); }
+            };
+          }
+        };
+      } else {
+        console.log('✅ ActionCable loaded from CDN');
+      }
+      
+      // Ensure App.cable is available regardless of loading method
+      if (!window.App) {
+        window.App = {};
+      }
+      
+      if (typeof ActionCable !== 'undefined' && !window.App.cable) {
+        try {
+          window.App.cable = ActionCable.createConsumer('/cable');
+          console.log('✅ App.cable initialized from CDN ActionCable');
+          console.log('✅ App.cable consumer ready:', window.App.cable);
+        } catch (e) {
+          console.error('❌ Failed to initialize App.cable:', e);
+        }
+      } else if (window.App.cable) {
+        console.log('✅ App.cable already initialized');
+      }
+      
+      console.log('🚀 JavaScript dependencies check complete');
+      
+      // Additional CDN loading diagnostics
+      console.log('📊 CDN Resource Status:');
+      console.log('- ActionCable CDN loaded:', typeof ActionCable !== 'undefined');
+      console.log('- Bootstrap CDN loaded:', typeof bootstrap !== 'undefined');
+      console.log('- Chart.js CDN loaded:', typeof Chart !== 'undefined');
+      
+      console.log('🔧 Fallback system status:');
+      console.log('- ActionCable fallback:', window.ActionCable ? 'active' : 'inactive');
+    </script>
+    
     <!-- JavaScript from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <%= javascript_importmap_tags %>
-    <%= javascript_include_tag 'application', 'data-turbo-track': 'reload' %>
+    <%= javascript_include_tag 'ragdoll/application', 'data-turbo-track': 'reload' %>
+    
+    <%= yield :javascript %>
   </body>
 </html>

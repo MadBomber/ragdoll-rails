@@ -473,19 +473,67 @@ document.addEventListener('DOMContentLoaded', function() {
           console.log('✅ Upload successful, processing has started');
           console.log('📡 Server session ID:', result.session_id);
           console.log('📡 Temp session ID used:', temporarySessionId);
+          console.log('📊 Processing results:', result.results);
           
-          // If we have a different session ID from server, update our subscription
-          if (result.session_id && result.session_id !== temporarySessionId) {
-            console.log('🔄 Server provided different session ID, updating subscription...');
-            // Unsubscribe from old channel
-            if (progressTracker) {
-              progressTracker.unsubscribe();
+          // Check if any files were processed synchronously
+          const syncResults = result.results?.filter(r => r.status === 'completed_sync') || [];
+          const queuedResults = result.results?.filter(r => r.status === 'queued') || [];
+          const failedResults = result.results?.filter(r => r.status === 'failed') || [];
+          
+          if (syncResults.length > 0) {
+            console.log('📋 Files processed synchronously:', syncResults);
+            // Update progress display for sync results
+            syncResults.forEach((syncResult, index) => {
+              const fileIndex = fileMapping.get(syncResult.file);
+              if (fileIndex !== undefined) {
+                updateFileStatus(fileIndex, 'completed', 'Processed successfully ✓');
+              }
+            });
+            
+            // Calculate overall progress
+            calculateOverallProgress();
+            
+            if (queuedResults.length === 0) {
+              // All files processed synchronously
+              updateProgressStatus('🎉 All files processed successfully! Redirecting...');
+              setTimeout(() => {
+                window.location.href = '<%= ragdoll.documents_path %>';
+              }, 2000);
+            } else {
+              updateProgressStatus(`${syncResults.length} files processed immediately, ${queuedResults.length} queued for background processing...`);
             }
-            // Subscribe to correct channel
-            setupProgressTracking(result.session_id);
           }
           
-          updateProgressStatus('Upload successful! Background processing started with real-time tracking...');
+          if (queuedResults.length > 0 && actionCableAvailable) {
+            // If we have a different session ID from server, update our subscription
+            if (result.session_id && result.session_id !== temporarySessionId) {
+              console.log('🔄 Server provided different session ID, updating subscription...');
+              // Unsubscribe from old channel
+              if (progressTracker) {
+                progressTracker.unsubscribe();
+              }
+              // Subscribe to correct channel
+              setupProgressTracking(result.session_id);
+            }
+            
+            updateProgressStatus('Upload successful! Background processing started with real-time tracking...');
+          } else if (queuedResults.length > 0) {
+            updateProgressStatus(`${queuedResults.length} files queued for background processing (real-time updates unavailable)...`);
+            // Redirect after a delay since we can't track progress
+            setTimeout(() => {
+              window.location.href = '<%= ragdoll.documents_path %>';
+            }, 3000);
+          }
+          
+          if (failedResults.length > 0) {
+            console.error('❌ Some files failed:', failedResults);
+            failedResults.forEach((failedResult, index) => {
+              const fileIndex = fileMapping.get(failedResult.file);
+              if (fileIndex !== undefined) {
+                updateFileStatus(fileIndex, 'failed', `Error: ${failedResult.error}`);
+              }
+            });
+          }
           
           // Clear upload flag since upload phase is complete
           uploadInProgress = false;
@@ -757,6 +805,33 @@ document.addEventListener('DOMContentLoaded', function() {
     if (statusEl) {
       statusEl.textContent = message;
       statusEl.className = `text-${type === 'danger' ? 'danger' : 'muted'} mt-2 d-block`;
+    }
+  }
+  
+  // Update individual file status
+  function updateFileStatus(fileIndex, status, message) {
+    const fileItem = document.getElementById(`file-${fileIndex}`);
+    const statusSpan = document.getElementById(`file-status-${fileIndex}`);
+    const iconSpan = document.getElementById(`file-icon-${fileIndex}`);
+    
+    if (!fileItem || !statusSpan) {
+      console.warn('File UI elements not found for index:', fileIndex);
+      return;
+    }
+    
+    // Update status and visual indicators
+    if (status === 'completed') {
+      statusSpan.textContent = message || 'Complete ✓';
+      iconSpan.className = 'fas fa-check-circle text-success';
+      fileItem.className = 'mb-2 p-2 border rounded bg-success text-white';
+    } else if (status === 'failed') {
+      statusSpan.textContent = message || 'Failed ✗';
+      iconSpan.className = 'fas fa-exclamation-circle text-danger';
+      fileItem.className = 'mb-2 p-2 border rounded bg-danger text-white';
+    } else if (status === 'processing') {
+      statusSpan.textContent = message || 'Processing...';
+      iconSpan.className = 'fas fa-cog fa-spin text-primary';
+      fileItem.className = 'mb-2 p-2 border rounded bg-primary text-white';
     }
   }
   

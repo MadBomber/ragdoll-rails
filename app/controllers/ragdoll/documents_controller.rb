@@ -263,33 +263,76 @@ module Ragdoll
         uploaded_files = [uploaded_files] unless uploaded_files.is_a?(Array)
         
         processed_count = 0
+        results = []
+        
         uploaded_files.each_with_index do |file, index|
           next unless file.respond_to?(:original_filename)
           
           Rails.logger.info "Processing file #{index + 1}: #{file.original_filename}"
           
-          # Generate unique file ID
-          file_id = "#{session_id}_#{index}_#{Time.current.to_i}"
-          
-          # Save uploaded file temporarily
-          temp_path = Rails.root.join('tmp', 'uploads', "#{file_id}_#{file.original_filename}")
-          FileUtils.mkdir_p(File.dirname(temp_path))
-          File.binwrite(temp_path, file.read)
-          
-          Rails.logger.info "File saved to: #{temp_path}"
-          
-          # Queue background job
-          ::Ragdoll::ProcessFileJob.perform_later(file_id, session_id, file.original_filename, temp_path.to_s)
-          Rails.logger.info "Job queued for file: #{file_id}"
-          
-          processed_count += 1
+          begin
+            # Generate unique file ID
+            file_id = "#{session_id}_#{index}_#{Time.current.to_i}"
+            
+            # Save uploaded file temporarily
+            temp_path = Rails.root.join('tmp', 'uploads', "#{file_id}_#{file.original_filename}")
+            FileUtils.mkdir_p(File.dirname(temp_path))
+            File.binwrite(temp_path, file.read)
+            
+            Rails.logger.info "File saved to: #{temp_path}"
+            
+            # Try to queue background job first, fallback to direct processing
+            begin
+              if defined?(::Ragdoll::ProcessFileJob)
+                ::Ragdoll::ProcessFileJob.perform_later(file_id, session_id, file.original_filename, temp_path.to_s)
+                Rails.logger.info "Job queued for file: #{file_id}"
+                results << { file: file.original_filename, status: 'queued' }
+              else
+                raise "ProcessFileJob not available"
+              end
+            rescue => job_error
+              Rails.logger.warn "Background job failed, processing directly: #{job_error.message}"
+              
+              # Process directly if job system is not available
+              result = ::Ragdoll.add_document(path: temp_path.to_s)
+              
+              if result[:success] && result[:document_id]
+                document = ::Ragdoll::Document.find(result[:document_id])
+                results << { 
+                  file: file.original_filename, 
+                  status: 'completed_sync',
+                  document_id: document.id
+                }
+                Rails.logger.info "File processed synchronously: #{file.original_filename}"
+              else
+                results << { 
+                  file: file.original_filename, 
+                  status: 'failed',
+                  error: result[:error] || 'Unknown error'
+                }
+              end
+              
+              # Clean up temp file for sync processing
+              File.delete(temp_path) if File.exist?(temp_path)
+            end
+            
+            processed_count += 1
+          rescue => file_error
+            Rails.logger.error "Error processing file #{file.original_filename}: #{file_error.message}"
+            results << { 
+              file: file.original_filename, 
+              status: 'failed',
+              error: file_error.message
+            }
+          end
         end
         
         Rails.logger.info "Returning success response for #{processed_count} files"
         render json: { 
           success: true, 
           session_id: session_id,
-          message: "#{processed_count} file(s) queued for processing" 
+          results: results,
+          message: "#{processed_count} file(s) processed" 
         }
       else
         Rails.logger.error "No files provided in upload_async"
