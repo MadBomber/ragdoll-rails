@@ -5,7 +5,7 @@ require 'rails/engine'
 module Ragdoll
   module Rails
     class Engine < ::Rails::Engine
-      isolate_namespace Ragdoll::Rails
+      isolate_namespace Ragdoll
       engine_name 'ragdoll'
 
       # Configure the engine to use migrations from the ragdoll gem
