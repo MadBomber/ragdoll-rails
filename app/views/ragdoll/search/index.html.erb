@@ -370,7 +370,7 @@
                 <%= form.hidden_field :use_similarity_search, value: use_similarity_search %>
                 <%= form.hidden_field :use_fulltext_search, value: use_fulltext_search %>
                 <%= form.button type: :submit, class: "btn btn-link p-0 text-decoration-none border-0 text-start", style: "font: inherit;" do %>
-                  <i class="fas fa-search me-1"></i><strong><%= search.query %></strong>
+                  <i class="fas fa-search me-1"></i><%= search.query %>
                 <% end %>
               <% end %>
               <br>
