@@ -21,9 +21,9 @@
         </div>
         <div class="card-footer bg-transparent">
           <div class="btn-group w-100" role="group">
-            <%= link_to "View", ragdoll.document_path(document), class: "btn btn-outline-primary btn-sm" %>
-            <%= link_to "Edit", ragdoll.edit_document_path(document), class: "btn btn-outline-secondary btn-sm" %>
-            <%= link_to "Delete", ragdoll.document_path(document), method: :delete, 
+            <%= link_to "View", helpers.ragdoll.document_path(document), class: "btn btn-outline-primary btn-sm" %>
+            <%= link_to "Edit", helpers.ragdoll.edit_document_path(document), class: "btn btn-outline-secondary btn-sm" %>
+            <%= link_to "Delete", helpers.ragdoll.document_path(document), method: :delete, 
                         class: "btn btn-outline-danger btn-sm",
                         data: { confirm: "Are you sure?" } %>
           </div>
