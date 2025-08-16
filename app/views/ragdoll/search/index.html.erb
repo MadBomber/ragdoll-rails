@@ -1,0 +1,336 @@
+<% content_for(:title, "Document Search") %>
+
+<%= render Ragdoll::PageHeaderComponent.new(
+  title: "Document Search",
+  subtitle: "Search documents using similarity and full-text search",
+  icon: "fas fa-search"
+) %>
+
+<div class="row">
+  <div class="col-lg-8">
+    <!-- Search Form -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-search"></i> Search Documents
+        </h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: ragdoll.search_path, method: :post, local: true, class: "search-form" do |form| %>
+          <div class="row">
+            <div class="col-12">
+              <div class="mb-3">
+                <%= form.label :query, "Search Query", class: "form-label" %>
+                <%= form.text_field :query, 
+                    value: @query, 
+                    class: "form-control form-control-lg", 
+                    placeholder: "Enter your search terms...",
+                    autofocus: true %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search Type Options -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="form-check form-switch">
+                <%= form.check_box :use_similarity_search, 
+                    { checked: @use_similarity_search != 'false', class: "form-check-input" }, 
+                    'true', 'false' %>
+                <%= form.label :use_similarity_search, "Similarity Search", class: "form-check-label" %>
+                <small class="form-text text-muted d-block">Find semantically similar content</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-check form-switch">
+                <%= form.check_box :use_fulltext_search, 
+                    { checked: @use_fulltext_search != 'false', class: "form-check-input" }, 
+                    'true', 'false' %>
+                <%= form.label :use_fulltext_search, "Full-Text Search", class: "form-check-label" %>
+                <small class="form-text text-muted d-block">Find exact text matches</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced Filters (Collapsible) -->
+          <div class="accordion mb-3" id="advancedFilters">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                  <i class="fas fa-filter me-2"></i> Advanced Filters
+                </button>
+              </h2>
+              <div id="filterCollapse" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                  <div class="row">
+                    <div class="col-md-3">
+                      <%= form.label :document_type, "Document Type", class: "form-label" %>
+                      <%= form.select :document_type, 
+                          options_for_select([
+                            ['All Types', ''],
+                            ['PDF', 'pdf'],
+                            ['Text', 'txt'],
+                            ['Word', 'docx'],
+                            ['Markdown', 'md']
+                          ], @filters[:document_type]),
+                          {}, { class: "form-select" } %>
+                    </div>
+                    <div class="col-md-3">
+                      <%= form.label :status, "Status", class: "form-label" %>
+                      <%= form.select :status,
+                          options_for_select([
+                            ['All Status', ''],
+                            ['Processed', 'processed'],
+                            ['Processing', 'processing'],
+                            ['Failed', 'failed']
+                          ], @filters[:status]),
+                          {}, { class: "form-select" } %>
+                    </div>
+                    <div class="col-md-3">
+                      <%= form.label :limit, "Results Limit", class: "form-label" %>
+                      <%= form.number_field :limit, 
+                          value: @filters[:limit], 
+                          class: "form-control",
+                          min: 1, max: 100 %>
+                    </div>
+                    <div class="col-md-3">
+                      <%= form.label :threshold, "Similarity Threshold", class: "form-label" %>
+                      <%= form.number_field :threshold, 
+                          value: @filters[:threshold], 
+                          class: "form-control",
+                          step: 0.001, min: 0, max: 1 %>
+                      <small class="form-text text-muted">Higher = more precise</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid">
+            <%= form.submit "Search Documents", class: "btn btn-primary btn-lg" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Search Results -->
+    <% if @search_performed %>
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-list-ul"></i> Search Results
+            <% if @detailed_results %>
+              <span class="badge bg-primary ms-2"><%= @detailed_results.count %></span>
+            <% end %>
+          </h5>
+          <% if @query.present? %>
+            <small class="text-muted">Query: "<%= @query %>"</small>
+          <% end %>
+        </div>
+        <div class="card-body">
+          <% if @error %>
+            <%= render Ragdoll::AlertComponent.new(
+              type: "danger",
+              title: "Search Error",
+              message: @error
+            ) %>
+          <% elsif @detailed_results&.any? %>
+            <div class="search-results">
+              <% @detailed_results.each_with_index do |result, index| %>
+                <div class="result-item border-bottom py-3 <%= 'border-bottom-0' if index == @detailed_results.count - 1 %>">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1">
+                        <% if result[:document] %>
+                          <%= link_to ragdoll.document_path(result[:document]), class: "text-decoration-none" do %>
+                            <%= result[:document].title || result[:document].filename %>
+                          <% end %>
+                        <% else %>
+                          Untitled Document
+                        <% end %>
+                      </h6>
+                      <div class="mb-2">
+                        <%= render Ragdoll::StatusBadgeComponent.new(status: result[:search_type]) %>
+                        <% if result[:similarity] %>
+                          <span class="badge bg-info ms-1">
+                            <%= number_to_percentage(result[:similarity] * 100, precision: 1) %> match
+                          </span>
+                        <% end %>
+                        <% if result[:document]&.content_type %>
+                          <span class="badge bg-secondary ms-1">
+                            <%= result[:document].content_type %>
+                          </span>
+                        <% end %>
+                      </div>
+                    </div>
+                  </div>
+
+                  <% if result[:content].present? %>
+                    <p class="text-muted mb-2">
+                      <%= truncate(result[:content], length: 200) %>
+                    </p>
+                  <% end %>
+
+                  <div class="row small text-muted">
+                    <% if result[:document] %>
+                      <div class="col-md-6">
+                        <i class="fas fa-calendar"></i> 
+                        Created <%= time_ago_in_words(result[:document].created_at) %> ago
+                      </div>
+                      <% if result[:document].respond_to?(:file_size) && result[:document].file_size %>
+                        <div class="col-md-6">
+                          <i class="fas fa-file-alt"></i> 
+                          <%= number_to_human_size(result[:document].file_size) %>
+                        </div>
+                      <% end %>
+                    <% end %>
+                  </div>
+
+                  <% if result[:usage_count] || result[:last_used] %>
+                    <div class="row small text-muted mt-1">
+                      <% if result[:usage_count] %>
+                        <div class="col-md-6">
+                          <i class="fas fa-eye"></i> 
+                          Used <%= result[:usage_count] %> times
+                        </div>
+                      <% end %>
+                      <% if result[:last_used] %>
+                        <div class="col-md-6">
+                          <i class="fas fa-clock"></i> 
+                          Last used <%= time_ago_in_words(result[:last_used]) %> ago
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <%= render Ragdoll::EmptyStateComponent.new(
+              title: "No results found",
+              message: @similarity_search_attempted ? 
+                       "Try lowering the similarity threshold (currently #{number_to_percentage(@similarity_threshold_used * 100, precision: 1)}) or using different search terms." :
+                       "Try different search terms or enable similarity search.",
+              icon: "fas fa-search"
+            ) %>
+          <% end %>
+        </div>
+      </div>
+    <% elsif @query.present? %>
+      <div class="card">
+        <div class="card-body text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Searching...</span>
+          </div>
+          <p class="mt-2 mb-0">Searching documents...</p>
+        </div>
+      </div>
+    <% else %>
+      <%= render Ragdoll::EmptyStateComponent.new(
+        title: "Ready to search",
+        message: "Enter a search query above to find documents using similarity or full-text search.",
+        icon: "fas fa-search"
+      ) %>
+    <% end %>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <!-- Search Tips -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="fas fa-lightbulb"></i> Search Tips
+        </h6>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0 small">
+          <li class="mb-2">
+            <strong>Similarity Search:</strong> Finds documents with similar meaning, even if they don't contain exact words.
+          </li>
+          <li class="mb-2">
+            <strong>Full-Text Search:</strong> Finds exact word matches within document content.
+          </li>
+          <li class="mb-2">
+            <strong>Threshold:</strong> Lower values return more results, higher values are more precise.
+          </li>
+          <li>
+            <strong>Combine both:</strong> Enable both search types for comprehensive results.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Recent Searches -->
+    <% if @recent_searches&.any? %>
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-history"></i> Recent Searches
+          </h6>
+        </div>
+        <div class="card-body">
+          <% @recent_searches.limit(5).each do |search| %>
+            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+              <div class="flex-grow-1">
+                <%= link_to ragdoll.search_index_path(search_id: search.id), 
+                    class: "text-decoration-none" do %>
+                  <div class="fw-medium"><%= truncate(search.query, length: 30) %></div>
+                  <small class="text-muted">
+                    <%= search.results_count %> results • 
+                    <%= time_ago_in_words(search.created_at) %> ago
+                  </small>
+                <% end %>
+              </div>
+              <span class="badge bg-<%= search.search_type == 'similarity' ? 'primary' : search.search_type == 'fulltext' ? 'success' : 'info' %>">
+                <%= search.search_type %>
+              </span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Statistics (if we're showing results) -->
+    <% if @search_performed && @similarity_stats.present? %>
+      <div class="card mt-4">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-chart-bar"></i> Search Statistics
+          </h6>
+        </div>
+        <div class="card-body">
+          <small class="text-muted">
+            <% if @similarity_stats[:documents_searched] %>
+              <div>Documents searched: <%= @similarity_stats[:documents_searched] %></div>
+            <% end %>
+            <% if @similarity_stats[:embeddings_compared] %>
+              <div>Embeddings compared: <%= @similarity_stats[:embeddings_compared] %></div>
+            <% end %>
+            <% if @similarity_stats[:search_time] %>
+              <div>Search time: <%= @similarity_stats[:search_time] %>s</div>
+            <% end %>
+            <% if @similarity_threshold_used %>
+              <div>Threshold used: <%= number_to_percentage(@similarity_threshold_used * 100, precision: 1) %></div>
+            <% end %>
+          </small>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+.result-item:hover {
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+  margin: -0.5rem;
+  padding: 1rem !important;
+}
+
+.search-form .form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+</style>
