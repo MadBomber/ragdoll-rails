@@ -299,9 +299,18 @@
         <% if @popular_queries&.any? %>
           <% @popular_queries.each do |query, count| %>
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <a href="<%= ragdoll.search_path %>?query=<%= CGI.escape(query) %>" class="text-decoration-none">
-                <%= query %>
-              </a>
+              <%= form_with url: ragdoll.search_path, method: :post, local: true, class: "d-inline", data: { turbo: false } do |form| %>
+                <%= form.hidden_field :query, value: query %>
+                <%= form.hidden_field :threshold, value: (::Rails.env.development? ? 0.001 : 0.7) %>
+                <%= form.hidden_field :document_type, value: '' %>
+                <%= form.hidden_field :status, value: '' %>
+                <%= form.hidden_field :limit, value: 10 %>
+                <%= form.hidden_field :use_similarity_search, value: 'true' %>
+                <%= form.hidden_field :use_fulltext_search, value: 'true' %>
+                <%= form.button type: :submit, class: "btn btn-link p-0 text-decoration-none border-0 text-start", style: "font: inherit;" do %>
+                  <%= query %>
+                <% end %>
+              <% end %>
               <span class="badge bg-secondary"><%= count %></span>
             </div>
           <% end %>
