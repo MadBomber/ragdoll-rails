@@ -52,8 +52,7 @@ module Ragdoll
             status: 'completed',
             progress: 100,
             message: 'Processing completed successfully',
-            document_id: document.id,
-            document_url: ::Ragdoll::Engine.routes.url_helpers.document_path(document)
+            document_id: document.id
           }
           
           ::Rails.logger.info "🎉 Broadcasting completion: #{completion_data}"
