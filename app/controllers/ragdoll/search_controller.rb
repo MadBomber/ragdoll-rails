@@ -53,7 +53,7 @@ module Ragdoll
           document_type: params[:document_type],
           status: params[:status],
           limit: params[:limit]&.to_i || 10,
-          threshold: params[:threshold]&.to_f || (Rails.env.development? ? 0.001 : 0.7)
+          threshold: params[:threshold]&.to_f || (::Rails.env.development? ? 0.001 : 0.7)
         }
         @query = params[:query]
         @use_similarity_search = params[:use_similarity_search] || 'true'
