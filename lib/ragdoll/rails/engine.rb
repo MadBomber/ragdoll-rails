@@ -36,7 +36,8 @@ module Ragdoll
         # Core functionality is provided by the ragdoll gem
         
         # Configure ViewComponent
-        if ::Rails.env.development? && app.config.respond_to?(:view_component) && app.config.view_component.respond_to?(:preview_paths)
+        if ::Rails.env.development? && app.config.respond_to?(:view_component)
+          app.config.view_component.preview_paths ||= []
           app.config.view_component.preview_paths << "#{root}/spec/components/previews"
         end
       end
