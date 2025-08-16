@@ -1,0 +1,366 @@
+<% content_for(:title, "Add New Document") %>
+
+<%= render Ragdoll::PageHeaderComponent.new(
+  title: "Add New Document",
+  subtitle: "Upload files or add text content to the Ragdoll system",
+  icon: "fas fa-plus-circle"
+) %>
+
+<div class="row">
+  <div class="col-lg-8">
+    <!-- File Upload Section -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-cloud-upload-alt"></i> File Upload
+        </h5>
+      </div>
+      <div class="card-body">
+        <%= form_with model: [@document], url: ragdoll.documents_path, local: true, multipart: true, class: "upload-form" do |form| %>
+          <div class="mb-4">
+            <label class="form-label fw-bold">Choose Files</label>
+            <div class="file-upload-area border-2 border-dashed rounded p-4 text-center">
+              <%= form.file_field :files, 
+                  multiple: true, 
+                  class: "form-control d-none", 
+                  id: "file-input",
+                  accept: ".pdf,.txt,.docx,.doc,.md,.csv" %>
+              
+              <div class="upload-prompt">
+                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                <p class="mb-2">
+                  <strong>Click to select files</strong> or drag and drop here
+                </p>
+                <p class="text-muted small mb-3">
+                  Supported formats: PDF, TXT, DOCX, DOC, MD, CSV
+                </p>
+                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('file-input').click()">
+                  <i class="fas fa-folder-open me-2"></i>Browse Files
+                </button>
+              </div>
+              
+              <div class="file-list d-none">
+                <h6 class="fw-bold mb-2">Selected Files:</h6>
+                <div id="selected-files"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Options -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Processing Priority</label>
+              <select class="form-select" name="priority">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Auto-process</label>
+              <div class="form-check form-switch mt-2">
+                <input class="form-check-input" type="checkbox" id="auto-process" checked>
+                <label class="form-check-label" for="auto-process">
+                  Process embeddings immediately
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid">
+            <%= form.submit "Upload Documents", class: "btn btn-primary btn-lg", id: "upload-btn" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Text Content Section -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-edit"></i> Text Content
+        </h5>
+      </div>
+      <div class="card-body">
+        <%= form_with model: [@document], url: ragdoll.documents_path, local: true, class: "text-form" do |form| %>
+          <div class="mb-3">
+            <label class="form-label fw-bold">Document Title</label>
+            <%= form.text_field :title, 
+                class: "form-control", 
+                placeholder: "Enter a title for your document" %>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-bold">Content</label>
+            <%= form.text_area :text_content, 
+                class: "form-control", 
+                rows: 12,
+                placeholder: "Paste or type your document content here...",
+                style: "font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;" %>
+            <small class="form-text text-muted">
+              Supports plain text, markdown, and other text formats
+            </small>
+          </div>
+
+          <div class="d-grid">
+            <%= form.submit "Add Text Document", class: "btn btn-success btn-lg" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <!-- Upload Tips -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="fas fa-lightbulb"></i> Upload Tips
+        </h6>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0 small">
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong>Supported formats:</strong> PDF, Word docs, text files, markdown, CSV
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong>Multiple files:</strong> Select multiple files for batch processing
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong>Large files:</strong> Processing happens in the background
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong>Text content:</strong> Paste content directly for quick addition
+          </li>
+          <li>
+            <i class="fas fa-info-circle text-info me-2"></i>
+            <strong>Processing:</strong> Documents are automatically indexed for search
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bulk Upload -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="fas fa-layer-group"></i> Bulk Operations
+        </h6>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">
+          Need to upload many documents? Use the bulk upload feature from the documents index page.
+        </p>
+        <%= link_to ragdoll.documents_path, class: "btn btn-outline-secondary btn-sm w-100" do %>
+          <i class="fas fa-list me-2"></i>View All Documents
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Processing Status -->
+    <div class="card">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="fas fa-info-circle"></i> What Happens Next?
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="process-steps small">
+          <div class="step-item d-flex mb-2">
+            <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; min-width: 20px; font-size: 10px;">1</div>
+            <div>Document uploaded and stored</div>
+          </div>
+          <div class="step-item d-flex mb-2">
+            <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; min-width: 20px; font-size: 10px;">2</div>
+            <div>Text extracted and processed</div>
+          </div>
+          <div class="step-item d-flex mb-2">
+            <div class="step-number bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; min-width: 20px; font-size: 10px;">3</div>
+            <div>AI embeddings generated</div>
+          </div>
+          <div class="step-item d-flex">
+            <div class="step-number bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px; min-width: 20px; font-size: 10px;">✓</div>
+            <div>Ready for search and retrieval</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Error Display -->
+<% if @document&.errors&.any? %>
+  <div class="row mt-4">
+    <div class="col-12">
+      <%= render Ragdoll::AlertComponent.new(
+        type: "danger",
+        title: "Upload Error",
+        message: @document.errors.full_messages.join(", ")
+      ) %>
+    </div>
+  </div>
+<% end %>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInput = document.getElementById('file-input');
+  const uploadArea = document.querySelector('.file-upload-area');
+  const uploadPrompt = document.querySelector('.upload-prompt');
+  const fileList = document.querySelector('.file-list');
+  const selectedFiles = document.getElementById('selected-files');
+  const uploadBtn = document.getElementById('upload-btn');
+
+  // File input change handler
+  fileInput.addEventListener('change', function(e) {
+    handleFiles(e.target.files);
+  });
+
+  // Drag and drop handlers
+  uploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    uploadArea.classList.add('border-primary', 'bg-light');
+  });
+
+  uploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('border-primary', 'bg-light');
+  });
+
+  uploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    uploadArea.classList.remove('border-primary', 'bg-light');
+    handleFiles(e.dataTransfer.files);
+    
+    // Update the file input
+    fileInput.files = e.dataTransfer.files;
+  });
+
+  function handleFiles(files) {
+    if (files.length === 0) {
+      uploadPrompt.classList.remove('d-none');
+      fileList.classList.add('d-none');
+      return;
+    }
+
+    uploadPrompt.classList.add('d-none');
+    fileList.classList.remove('d-none');
+    
+    selectedFiles.innerHTML = '';
+    
+    Array.from(files).forEach((file, index) => {
+      const fileItem = document.createElement('div');
+      fileItem.className = 'file-item d-flex justify-content-between align-items-center p-2 border rounded mb-2';
+      fileItem.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="fas fa-file text-muted me-2"></i>
+          <div>
+            <div class="fw-medium">${file.name}</div>
+            <small class="text-muted">${formatFileSize(file.size)}</small>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      selectedFiles.appendChild(fileItem);
+    });
+
+    updateUploadButton(files.length);
+  }
+
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function updateUploadButton(fileCount) {
+    if (fileCount > 0) {
+      uploadBtn.innerHTML = `<i class="fas fa-cloud-upload-alt me-2"></i>Upload ${fileCount} Document${fileCount > 1 ? 's' : ''}`;
+      uploadBtn.disabled = false;
+    } else {
+      uploadBtn.innerHTML = '<i class="fas fa-cloud-upload-alt me-2"></i>Upload Documents';
+      uploadBtn.disabled = true;
+    }
+  }
+
+  window.removeFile = function(index) {
+    const dt = new DataTransfer();
+    const files = Array.from(fileInput.files);
+    
+    files.forEach((file, i) => {
+      if (i !== index) {
+        dt.items.add(file);
+      }
+    });
+    
+    fileInput.files = dt.files;
+    handleFiles(fileInput.files);
+  };
+
+  // Form submission handler
+  document.querySelector('.upload-form').addEventListener('submit', function(e) {
+    if (fileInput.files.length === 0) {
+      e.preventDefault();
+      alert('Please select at least one file to upload.');
+      return;
+    }
+    
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+    uploadBtn.disabled = true;
+  });
+
+  // Text form validation
+  document.querySelector('.text-form').addEventListener('submit', function(e) {
+    const textContent = document.querySelector('textarea[name="ragdoll_document[text_content]"]');
+    if (!textContent.value.trim()) {
+      e.preventDefault();
+      alert('Please enter some text content.');
+      textContent.focus();
+    }
+  });
+});
+</script>
+
+<style>
+.file-upload-area {
+  transition: all 0.3s ease;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-upload-area:hover {
+  border-color: #0d6efd !important;
+  background-color: #f8f9fa;
+}
+
+.file-item {
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  background-color: #e9ecef;
+}
+
+.upload-prompt {
+  text-align: center;
+}
+
+.step-number {
+  font-weight: bold;
+}
+
+.process-steps .step-item {
+  align-items: flex-start;
+}
+</style>
