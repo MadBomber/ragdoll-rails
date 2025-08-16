@@ -25,7 +25,7 @@
             <%= link_to "Edit", helpers.ragdoll.edit_document_path(document), class: "btn btn-outline-secondary btn-sm" %>
             <%= link_to "Delete", helpers.ragdoll.document_path(document), method: :delete, 
                         class: "btn btn-outline-danger btn-sm",
-                        data: { confirm: "Are you sure?", turbo_method: :delete } %>
+                        data: { confirm: "Are you sure you want to delete '#{document.title}'?", turbo_method: :delete } %>
           </div>
         </div>
       </div>
