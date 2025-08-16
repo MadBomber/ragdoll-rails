@@ -178,7 +178,45 @@
               <h5>No results found</h5>
               <p class="text-muted">Try adjusting your search query or filters.</p>
               
-              <% if @similarity_search_attempted && @similarity_stats && @similarity_stats[:total_similarities_calculated] && @similarity_stats[:total_similarities_calculated] > 0 %>
+              <% if @below_threshold_stats && @below_threshold_stats[:count] > 0 %>
+                <div class="alert alert-warning mt-3">
+                  <h6><i class="fas fa-exclamation-triangle"></i> Results exist below your threshold!</h6>
+                  <p class="mb-3">
+                    Found <strong><%= @below_threshold_stats[:count] %></strong> potential matches below your threshold of 
+                    <strong><%= number_with_precision(@similarity_threshold_used, precision: 3) %></strong>
+                  </p>
+                  
+                  <div class="row text-center mb-3">
+                    <div class="col-md-4">
+                      <strong>Highest Match</strong><br>
+                      <span class="badge bg-success fs-6"><%= number_with_precision(@below_threshold_stats[:highest], precision: 3) %></span>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Average Match</strong><br>
+                      <span class="badge bg-info fs-6"><%= number_with_precision(@below_threshold_stats[:average], precision: 3) %></span>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Lowest Match</strong><br>
+                      <span class="badge bg-secondary fs-6"><%= number_with_precision(@below_threshold_stats[:lowest], precision: 3) %></span>
+                    </div>
+                  </div>
+                  
+                  <div class="d-grid gap-2">
+                    <a href="<%= ragdoll.search_path(
+                      query: @query,
+                      threshold: @below_threshold_stats[:suggested_threshold],
+                      document_type: @filters[:document_type],
+                      status: @filters[:status],
+                      limit: @filters[:limit],
+                      use_similarity_search: params[:use_similarity_search],
+                      use_fulltext_search: params[:use_fulltext_search]
+                    ) %>" class="btn btn-warning">
+                      <i class="fas fa-redo"></i> 
+                      Search again with threshold: <%= number_with_precision(@below_threshold_stats[:suggested_threshold], precision: 3) %>
+                    </a>
+                  </div>
+                </div>
+              <% elsif @similarity_search_attempted && @similarity_stats && @similarity_stats[:total_similarities_calculated] && @similarity_stats[:total_similarities_calculated] > 0 %>
                 <div class="alert alert-info mt-3">
                   <h6><i class="fas fa-chart-line"></i> Similarity Search Statistics</h6>
                   <p class="mb-2">No results exceeded the similarity threshold of <strong><%= number_with_precision(@similarity_threshold_used, precision: 3) %></strong></p>

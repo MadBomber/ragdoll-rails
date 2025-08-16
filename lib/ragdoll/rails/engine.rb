@@ -38,6 +38,9 @@ module Ragdoll
         # Ensure ViewComponent autoloading for engine components
         app.config.autoload_paths += ["#{root}/app/components"]
         
+        # Ensure Services autoloading for engine services
+        app.config.autoload_paths += ["#{root}/app/services"]
+        
         # Configure ViewComponent
         if ::Rails.env.development? && app.config.respond_to?(:view_component)
           app.config.view_component.preview_paths ||= []

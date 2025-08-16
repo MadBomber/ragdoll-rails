@@ -36,13 +36,13 @@ module Ragdoll
           @use_similarity_search = form_params['use_similarity_search'] || search_options['use_similarity'] || 'true'
           @use_fulltext_search = form_params['use_fulltext_search'] || search_options['use_fulltext'] || 'true'
           
-          Rails.logger.debug "🔍 Reconstructed search from ID #{params[:search_id]}: #{@query}"
+          ::Rails.logger.debug "🔍 Reconstructed search from ID #{params[:search_id]}: #{@query}"
           
         rescue ActiveRecord::RecordNotFound
-          Rails.logger.warn "🔍 Search ID #{params[:search_id]} not found"
+          ::Rails.logger.warn "🔍 Search ID #{params[:search_id]} not found"
           # Fall back to default behavior
         rescue => e
-          Rails.logger.error "🔍 Error reconstructing search: #{e.message}"
+          ::Rails.logger.error "🔍 Error reconstructing search: #{e.message}"
           # Fall back to default behavior
         end
       end
@@ -64,15 +64,15 @@ module Ragdoll
     end
     
     def search
-      Rails.logger.debug "🔍 Search called with params: #{params.inspect}"
+      ::Rails.logger.debug "🔍 Search called with params: #{params.inspect}"
       @query = params[:query]
       @filters = {
         document_type: params[:document_type],
         status: params[:status],
         limit: params[:limit]&.to_i || 10,
-        threshold: params[:threshold]&.to_f || (Rails.env.development? ? 0.001 : 0.7)  # Much lower threshold for development
+        threshold: params[:threshold]&.to_f || (::Rails.env.development? ? 0.001 : 0.7)  # Much lower threshold for development
       }
-      Rails.logger.debug "🔍 Query: #{@query.inspect}, Filters: #{@filters.inspect}"
+      ::Rails.logger.debug "🔍 Query: #{@query.inspect}, Filters: #{@filters.inspect}"
       
       # Initialize data needed for the view sidebar - load recent searches
       @recent_searches = ::Ragdoll::Search.order(created_at: :desc).limit(10)
@@ -85,6 +85,7 @@ module Ragdoll
           use_fulltext = params[:use_fulltext_search] != 'false'
           
           @detailed_results = []
+          @below_threshold_results = []
           
           # Perform similarity search if enabled
           if use_similarity
@@ -132,8 +133,47 @@ module Ragdoll
               @similarity_threshold_used = @filters[:threshold]
               @similarity_search_attempted = true
               
+              # If no results found, also search with a very low threshold to get statistics
+              if @detailed_results.empty? || @detailed_results.select { |r| r[:search_type] == 'similarity' }.empty?
+                begin
+                  # Search again with minimal threshold to get all potential matches
+                  stats_params = search_params.merge(threshold: 0.0, limit: 100)
+                  stats_response = ::Ragdoll.search(stats_params)
+                  
+                  if stats_response.is_a?(Hash) && stats_response[:results]
+                    all_similarities = []
+                    stats_response[:results].each do |result|
+                      if result[:similarity]
+                        all_similarities << result[:similarity]
+                        # Store below-threshold results
+                        if result[:similarity] < @filters[:threshold] && result[:similarity] > 0
+                          @below_threshold_results << {
+                            document_id: result[:document_id],
+                            similarity: result[:similarity],
+                            content: result[:content]
+                          }
+                        end
+                      end
+                    end
+                    
+                    # Calculate statistics for display
+                    if all_similarities.any?
+                      @below_threshold_stats = {
+                        count: all_similarities.count { |s| s < @filters[:threshold] && s > 0 },
+                        highest: all_similarities.max,
+                        lowest: all_similarities.select { |s| s > 0 }.min,
+                        average: all_similarities.sum / all_similarities.size.to_f,
+                        suggested_threshold: all_similarities.select { |s| s > 0 }.min
+                      }
+                    end
+                  end
+                rescue => stats_error
+                  ::Rails.logger.error "Stats gathering error: #{stats_error.message}"
+                end
+              end
+              
             rescue => e
-              Rails.logger.error "Similarity search error: #{e.message}"
+              ::Rails.logger.error "Similarity search error: #{e.message}"
               # Continue with fulltext search even if similarity search fails
             end
           end
@@ -214,18 +254,18 @@ module Ragdoll
                 }
               }.to_json
             )
-            Rails.logger.debug "🔍 Search saved successfully"
+            ::Rails.logger.debug "🔍 Search saved successfully"
           rescue => e
-            Rails.logger.error "🔍 Failed to save search: #{e.message}"
+            ::Rails.logger.error "🔍 Failed to save search: #{e.message}"
             # Continue without failing the search
           end
           
-          Rails.logger.debug "🔍 Search completed successfully. Results count: #{@detailed_results.count}"
+          ::Rails.logger.debug "🔍 Search completed successfully. Results count: #{@detailed_results.count}"
           @search_performed = true
           
         rescue => e
-          Rails.logger.error "🔍 Search error: #{e.message}"
-          Rails.logger.error e.backtrace.join("\n")
+          ::Rails.logger.error "🔍 Search error: #{e.message}"
+          ::Rails.logger.error e.backtrace.join("\n")
           @error = e.message
           @search_performed = false
         end
