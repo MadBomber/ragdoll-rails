@@ -184,41 +184,48 @@ module Ragdoll
           successful_count = 0
           failed_files = []
           
-          files.each do |file|
-            begin
-              # Create a temporary file to save the uploaded content
-              temp_file = Tempfile.new([File.basename(file.original_filename, ".*"), File.extname(file.original_filename)])
-              
-              # Handle encoding issues by reading as binary first
-              content = file.read
-              if content.encoding == Encoding::ASCII_8BIT
-                # Try to force UTF-8 encoding, replacing invalid characters
-                content = content.force_encoding('UTF-8')
-                unless content.valid_encoding?
-                  content = content.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
+          # Process files in batches to avoid "too many open files" error
+          batch_size = 50  # Process 50 files at a time
+          files.each_slice(batch_size) do |file_batch|
+            file_batch.each do |file|
+              begin
+                # Create a temporary file to save the uploaded content
+                temp_file = Tempfile.new([File.basename(file.original_filename, ".*"), File.extname(file.original_filename)])
+                
+                # Handle encoding issues by reading as binary first
+                content = file.read
+                if content.encoding == Encoding::ASCII_8BIT
+                  # Try to force UTF-8 encoding, replacing invalid characters
+                  content = content.force_encoding('UTF-8')
+                  unless content.valid_encoding?
+                    content = content.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
+                  end
                 end
-              end
-              
-              temp_file.write(content)
-              temp_file.close
-              
-              # Add document using ragdoll with force option if provided
-              force_duplicate = params[:force_duplicate] == '1'
-              result = ::Ragdoll.add_document(path: temp_file.path, force: force_duplicate)
-              
-              if result
-                successful_count += 1
-              else
+                
+                temp_file.write(content)
+                temp_file.close
+                
+                # Add document using ragdoll with force option if provided
+                force_duplicate = params[:force_duplicate] == '1'
+                result = ::Ragdoll.add_document(path: temp_file.path, force: force_duplicate)
+                
+                if result
+                  successful_count += 1
+                else
+                  failed_files << file.original_filename
+                end
+                
+              rescue => e
+                Rails.logger.error "Failed to process file #{file.original_filename}: #{e.message}"
                 failed_files << file.original_filename
+              ensure
+                # Clean up temp file
+                temp_file&.unlink if temp_file&.path
               end
-              
-            rescue => e
-              Rails.logger.error "Failed to process file #{file.original_filename}: #{e.message}"
-              failed_files << file.original_filename
-            ensure
-              # Clean up temp file
-              temp_file&.unlink if temp_file&.path
             end
+            
+            # Force garbage collection after each batch to free file descriptors
+            GC.start
           end
           
           if failed_files.any?
@@ -311,7 +318,11 @@ module Ragdoll
         processed_count = 0
         results = []
         
-        uploaded_files.each_with_index do |file, index|
+        # Process files in batches to avoid "too many open files" error
+        batch_size = 50  # Process 50 files at a time
+        uploaded_files.each_slice(batch_size).with_index do |file_batch, batch_index|
+          file_batch.each_with_index do |file, batch_file_index|
+            index = batch_index * batch_size + batch_file_index
           next unless file.respond_to?(:original_filename)
           
           logger.info "Processing file #{index + 1}: #{file.original_filename}"
@@ -372,6 +383,10 @@ module Ragdoll
               error: file_error.message
             }
           end
+          end
+          
+          # Force garbage collection after each batch to free file descriptors
+          GC.start
         end
         
         logger.info "Returning success response for #{processed_count} files"
