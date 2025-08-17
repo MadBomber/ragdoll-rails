@@ -1,0 +1,333 @@
+<% content_for(:title, "Analytics Dashboard") %>
+
+<%= render Ragdoll::PageHeaderComponent.new(
+  title: "Analytics Dashboard", 
+  subtitle: "Search patterns, usage statistics, and system insights",
+  icon: "fas fa-chart-line"
+) %>
+
+<!-- Search Analytics Overview -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Total Searches",
+      value: @search_analytics[:total_searches],
+      icon: "fas fa-search",
+      color: "primary"
+    ) %>
+  </div>
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Unique Queries",
+      value: @search_analytics[:unique_queries],
+      icon: "fas fa-question-circle",
+      color: "info"
+    ) %>
+  </div>
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Avg Results",
+      value: @search_analytics[:average_results],
+      icon: "fas fa-list",
+      color: "success"
+    ) %>
+  </div>
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Avg Similarity",
+      value: number_to_percentage(@search_analytics[:average_similarity] * 100, precision: 1),
+      icon: "fas fa-percentage",
+      color: "warning"
+    ) %>
+  </div>
+</div>
+
+<!-- Time-based Analytics -->
+<div class="row mb-4">
+  <div class="col-md-4">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Today",
+      value: @search_analytics[:searches_today],
+      icon: "fas fa-calendar-day",
+      color: "primary"
+    ) %>
+  </div>
+  <div class="col-md-4">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "This Week",
+      value: @search_analytics[:searches_this_week],
+      icon: "fas fa-calendar-week",
+      color: "success"
+    ) %>
+  </div>
+  <div class="col-md-4">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "This Month",
+      value: @search_analytics[:searches_this_month],
+      icon: "fas fa-calendar-alt",
+      color: "info"
+    ) %>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Search Trends Chart -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-line"></i> Search Trends (Last 7 Days)
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="searchTrendsChart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Types Distribution -->
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-pie"></i> Search Types
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="searchTypesChart" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Top Queries -->
+  <div class="col-lg-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-fire"></i> Top Search Queries
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @top_queries.any? %>
+          <% @top_queries.each_with_index do |(query, count), index| %>
+            <div class="d-flex justify-content-between align-items-center mb-2 <%= 'border-bottom pb-2' unless index == @top_queries.count - 1 %>">
+              <div class="flex-grow-1">
+                <div class="fw-medium"><%= truncate(query, length: 40) %></div>
+              </div>
+              <div class="ms-2">
+                <span class="badge bg-primary"><%= count %></span>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <%= render Ragdoll::EmptyStateComponent.new(
+            title: "No queries yet",
+            message: "Search data will appear here once users start searching.",
+            icon: "fas fa-search"
+          ) %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Documents -->
+  <div class="col-lg-6">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-star"></i> Most Accessed Documents
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @top_documents.any? %>
+          <% @top_documents.each_with_index do |(title, usage_count), index| %>
+            <div class="d-flex justify-content-between align-items-center mb-2 <%= 'border-bottom pb-2' unless index == @top_documents.count - 1 %>">
+              <div class="flex-grow-1">
+                <div class="fw-medium"><%= truncate(title, length: 35) %></div>
+                <small class="text-muted">Used <%= usage_count %> times</small>
+              </div>
+              <div class="ms-2">
+                <span class="badge bg-success"><%= usage_count %></span>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <%= render Ragdoll::EmptyStateComponent.new(
+            title: "No document usage yet",
+            message: "Document access statistics will appear here.",
+            icon: "fas fa-file-alt"
+          ) %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Similarity Score Distribution -->
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-bar"></i> Similarity Score Distribution
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="similarityChart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Statistics -->
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-server"></i> System Statistics
+        </h5>
+      </div>
+      <div class="card-body">
+        <dl class="row small">
+          <dt class="col-sm-7">Total Documents:</dt>
+          <dd class="col-sm-5"><%= @system_stats[:total_documents] %></dd>
+          
+          <dt class="col-sm-7">Processed:</dt>
+          <dd class="col-sm-5">
+            <span class="badge bg-success"><%= @system_stats[:processed_documents] %></span>
+          </dd>
+          
+          <dt class="col-sm-7">Failed:</dt>
+          <dd class="col-sm-5">
+            <span class="badge bg-danger"><%= @system_stats[:failed_documents] %></span>
+          </dd>
+          
+          <dt class="col-sm-7">Pending:</dt>
+          <dd class="col-sm-5">
+            <span class="badge bg-warning"><%= @system_stats[:pending_documents] %></span>
+          </dd>
+          
+          <dt class="col-sm-7">Total Embeddings:</dt>
+          <dd class="col-sm-5"><%= @system_stats[:total_embeddings] %></dd>
+          
+          <dt class="col-sm-7">Embedding Usage:</dt>
+          <dd class="col-sm-5"><%= @system_stats[:total_embedding_usage] %></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Search Trends Chart
+  const trendsCtx = document.getElementById('searchTrendsChart').getContext('2d');
+  new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+      labels: <%= @search_trends.keys.to_json.html_safe %>,
+      datasets: [{
+        label: 'Searches',
+        data: <%= @search_trends.values.to_json.html_safe %>,
+        borderColor: '#0d6efd',
+        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      }
+    }
+  });
+
+  // Search Types Chart
+  const typesCtx = document.getElementById('searchTypesChart').getContext('2d');
+  const searchTypesData = <%= @search_analytics[:search_types].to_json.html_safe %>;
+  new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(searchTypesData).map(type => type.charAt(0).toUpperCase() + type.slice(1)),
+      datasets: [{
+        data: Object.values(searchTypesData),
+        backgroundColor: [
+          '#0d6efd',
+          '#198754',
+          '#ffc107',
+          '#dc3545',
+          '#6f42c1'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+
+  // Similarity Distribution Chart
+  const similarityCtx = document.getElementById('similarityChart').getContext('2d');
+  const similarityData = <%= @similarity_distribution.to_json.html_safe %>;
+  new Chart(similarityCtx, {
+    type: 'bar',
+    data: {
+      labels: Object.keys(similarityData),
+      datasets: [{
+        label: 'Search Count',
+        data: Object.values(similarityData),
+        backgroundColor: [
+          '#198754',
+          '#20c997',
+          '#0dcaf0',
+          '#6f42c1',
+          '#fd7e14',
+          '#dc3545'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Similarity Score Range'
+          }
+        }
+      }
+    }
+  });
+});
+</script>

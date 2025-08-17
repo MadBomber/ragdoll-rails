@@ -5,7 +5,7 @@ require 'rails/engine'
 module Ragdoll
   module Rails
     class Engine < ::Rails::Engine
-      isolate_namespace Ragdoll::Rails
+      isolate_namespace Ragdoll
       engine_name 'ragdoll'
 
       # Configure the engine to use migrations from the ragdoll gem
@@ -34,7 +34,38 @@ module Ragdoll
       initializer "ragdoll.configure" do |app|
         # Configure Rails-specific functionality
         # Core functionality is provided by the ragdoll gem
+        
+        # Ensure ViewComponent autoloading for engine components
+        app.config.autoload_paths += ["#{root}/app/components"]
+        
+        # Ensure Services autoloading for engine services
+        app.config.autoload_paths += ["#{root}/app/services"]
+        
+        # Configure ViewComponent
+        if ::Rails.env.development? && app.config.respond_to?(:view_component)
+          app.config.view_component.preview_paths ||= []
+          app.config.view_component.preview_paths << "#{root}/spec/components/previews"
+        end
+        
+        # Configure ActionCable for the engine
+        # Provide default ActionCable configuration if not already set
+        app.config.action_cable.mount_path ||= '/cable'
+        
+        # Set default adapter if not already configured
+        unless app.config.action_cable.adapter
+          if ::Rails.env.development?
+            app.config.action_cable.adapter = 'redis'
+            app.config.action_cable.url = 'redis://localhost:6379/0'
+          elsif ::Rails.env.test?
+            app.config.action_cable.adapter = 'test'
+          elsif ::Rails.env.production?
+            app.config.action_cable.adapter = 'redis'
+            app.config.action_cable.url = ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" }
+            app.config.action_cable.channel_prefix = 'ragdoll_rails_production'
+          end
+        end
       end
+
 
       # Ensure models are eager loaded in production
       initializer "ragdoll.eager_load", after: "finisher_hook" do |app|

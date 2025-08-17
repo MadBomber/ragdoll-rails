@@ -1,0 +1,15 @@
+<div class="<%= card_classes %>">
+  <% if title %>
+    <div class="card-header">
+      <h5>
+        <% if icon %>
+          <i class="<%= icon %>"></i>
+        <% end %>
+        <%= title %>
+      </h5>
+    </div>
+  <% end %>
+  <div class="card-body">
+    <%= content %>
+  </div>
+</div>

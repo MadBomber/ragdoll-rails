@@ -1,0 +1,1518 @@
+<% content_for :title, "Add Document - Ragdoll Engine" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-plus"></i> Add Document</h1>
+      <%= link_to "Back to Documents", ragdoll.documents_path, class: "btn btn-outline-secondary" %>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="file-tab" data-bs-toggle="tab" href="#file-upload" role="tab">
+              <i class="fas fa-upload"></i> Upload Files
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="text-tab" data-bs-toggle="tab" href="#text-content" role="tab">
+              <i class="fas fa-keyboard"></i> Text Content
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="directory-tab" data-bs-toggle="tab" href="#directory-upload" role="tab">
+              <i class="fas fa-folder"></i> Directory
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body">
+        <div class="tab-content">
+          <!-- File Upload Tab -->
+          <div class="tab-pane fade show active" id="file-upload" role="tabpanel">
+            
+            <!-- Progress Upload Section -->
+            <div id="progress-upload-section">
+              <h6 class="text-primary mb-3">
+                <i class="fas fa-chart-line me-2"></i>Upload with Progress Tracking
+              </h6>
+              
+              <!-- Status indicator -->
+              <div id="websocket-status" class="alert alert-info mb-3">
+                <i class="fas fa-spinner fa-spin me-2"></i>Checking real-time capabilities...
+              </div>
+              
+              <!-- Progress Upload Form -->
+              <form id="progress-upload-form" 
+                    action="<%= ragdoll.upload_async_documents_path %>"
+                    method="post" 
+                    enctype="multipart/form-data"
+                    class="needs-validation mb-4"
+                    novalidate>
+                
+                <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                
+                <div class="mb-3">
+                  <label for="progress_files" class="form-label">Select Files</label>
+                  <input type="file" 
+                         name="ragdoll_document[files][]" 
+                         id="progress_files"
+                         multiple 
+                         accept=".pdf,.docx,.txt,.md,.html,.json,.xml,.csv" 
+                         class="form-control" 
+                         required>
+                  <div class="form-text">
+                    Supported formats: PDF, DOCX, TXT, MD, HTML, JSON, XML, CSV
+                  </div>
+                  <div class="invalid-feedback">
+                    Please select at least one file.
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="progress_metadata" class="form-label">Metadata (Optional)</label>
+                  <textarea name="ragdoll_document[metadata]" 
+                            id="progress_metadata"
+                            placeholder='{"author": "Your Name", "category": "documentation"}' 
+                            class="form-control" 
+                            rows="3"></textarea>
+                  <div class="form-text">
+                    Additional metadata in JSON format
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input type="checkbox" 
+                           name="ragdoll_document[force_duplicate]" 
+                           value="1"
+                           id="progress_force_duplicate"
+                           class="form-check-input">
+                    <label for="progress_force_duplicate" class="form-check-label">
+                      <i class="fas fa-copy me-1 text-warning"></i>
+                      Allow duplicate documents
+                    </label>
+                    <div class="form-text">
+                      Check this to add documents even if duplicates already exist in the system
+                    </div>
+                  </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="progress-upload-btn">
+                  <i class="fas fa-upload me-2"></i>
+                  Upload Files with Progress
+                </button>
+              </form>
+              
+              <!-- Progress Container -->
+              <div id="progress-container" class="mt-4" style="display: none;">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-tasks me-2"></i>Upload Progress</h6>
+                  </div>
+                  <div class="card-body">
+                    <div id="file-status-list"></div>
+                    <div class="mt-3">
+                      <div class="d-flex justify-content-between mb-2">
+                        <span>Overall Progress:</span>
+                        <span id="overall-percentage">0%</span>
+                      </div>
+                      <div class="progress">
+                        <div id="overall-progress-bar" 
+                             class="progress-bar" 
+                             role="progressbar" 
+                             style="width: 0%" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                          0%
+                        </div>
+                      </div>
+                      <small id="progress-status" class="text-muted mt-2 d-block">Ready to upload</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Text Content Tab -->
+          <div class="tab-pane fade" id="text-content" role="tabpanel">
+            <%= form_with model: @document, 
+                          url: ragdoll.documents_path, 
+                          local: true, 
+                          class: "needs-validation", 
+                          novalidate: true, 
+                          as: :ragdoll_document do |form| %>
+              
+              <div class="mb-3">
+                <label for="document_title" class="form-label">Title</label>
+                <%= form.text_field :title, 
+                                    placeholder: "Enter document title", 
+                                    class: "form-control", 
+                                    required: true %>
+                <div class="invalid-feedback">
+                  Please provide a title.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="document_text_content" class="form-label">Content</label>
+                <%= form.text_area :text_content, 
+                                   placeholder: "Enter your text content here...", 
+                                   class: "form-control", 
+                                   rows: 10, 
+                                   required: true %>
+                <div class="invalid-feedback">
+                  Please provide some content.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label for="text_metadata" class="form-label">Metadata (Optional)</label>
+                <%= form.text_area :metadata, 
+                                   placeholder: '{"author": "Your Name", "category": "documentation"}', 
+                                   class: "form-control", 
+                                   rows: 3,
+                                   id: "text_metadata" %>
+                <div class="form-text">
+                  Additional metadata in JSON format
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-check">
+                  <%= form.check_box :force_duplicate, 
+                                     { class: "form-check-input", id: "text_force_duplicate" }, 
+                                     "1", "0" %>
+                  <label for="text_force_duplicate" class="form-check-label">
+                    <i class="fas fa-copy me-1 text-warning"></i>
+                    Allow duplicate documents
+                  </label>
+                  <div class="form-text">
+                    Check this to add documents even if duplicates already exist in the system
+                  </div>
+                </div>
+              </div>
+              
+              <%= form.submit "Add Document", class: "btn btn-primary", id: "text-content-btn" %>
+            <% end %>
+          </div>
+          
+          <!-- Directory Upload Tab -->
+          <div class="tab-pane fade" id="directory-upload" role="tabpanel">
+            <%= form_with url: ragdoll.bulk_upload_documents_path, 
+                          method: :post, 
+                          local: true, 
+                          multipart: true,
+                          class: "needs-validation", 
+                          novalidate: true, 
+                          id: "directory-upload-form" do |form| %>
+              
+              <div class="mb-3">
+                <label for="directory_files" class="form-label">Select Directory</label>
+                <%= form.file_field :directory_files, 
+                                    multiple: true, 
+                                    class: "form-control", 
+                                    id: "directory_files",
+                                    required: true %>
+                <div class="form-text">
+                  Click "Choose Files" and select a folder to upload all supported files within it
+                </div>
+                <div class="invalid-feedback">
+                  Please select a directory.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-check">
+                  <input type="checkbox" 
+                         name="force_duplicate" 
+                         value="1"
+                         id="directory_force_duplicate"
+                         class="form-check-input">
+                  <label for="directory_force_duplicate" class="form-check-label">
+                    <i class="fas fa-copy me-1 text-warning"></i>
+                    Allow duplicate documents
+                  </label>
+                  <div class="form-text">
+                    Check this to add documents even if duplicates already exist in the system
+                  </div>
+                </div>
+              </div>
+              
+              <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Note:</strong> This will recursively process all supported files in the specified directory.
+                Large directories may take some time to process.
+              </div>
+              
+              <button type="submit" class="btn btn-warning" id="directory-upload-btn">
+                <span class="spinner-border spinner-border-sm d-none me-2" role="status" aria-hidden="true"></span>
+                <span class="btn-text">Import Directory</span>
+              </button>
+              
+              <div class="alert alert-warning mt-3 d-none" id="directory-processing-alert">
+                <i class="fas fa-spinner fa-spin"></i>
+                <strong>Processing...</strong> Your directory is being imported. This may take several minutes for large directories.
+                Please do not close this page.
+              </div>
+              
+              <!-- Directory Upload Progress Container -->
+              <div id="directory-progress-container" class="mt-4" style="display: none;">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-folder-open me-2"></i>Directory Import Progress</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between mb-2">
+                        <span>Upload Progress:</span>
+                        <span id="directory-upload-percentage">0%</span>
+                      </div>
+                      <div class="progress mb-2">
+                        <div id="directory-upload-progress-bar" 
+                             class="progress-bar" 
+                             role="progressbar" 
+                             style="width: 0%" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                          0%
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between mb-2">
+                        <span>Processing Progress:</span>
+                        <span id="directory-processing-percentage">0%</span>
+                      </div>
+                      <div class="progress">
+                        <div id="directory-processing-progress-bar" 
+                             class="progress-bar bg-success" 
+                             role="progressbar" 
+                             style="width: 0%" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                          0%
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="row">
+                      <div class="col-md-6">
+                        <small class="text-muted">
+                          <i class="fas fa-upload me-1"></i>
+                          <span id="directory-files-uploaded">0</span> / 
+                          <span id="directory-total-files">0</span> files uploaded
+                        </small>
+                      </div>
+                      <div class="col-md-6">
+                        <small class="text-muted">
+                          <i class="fas fa-check-circle me-1"></i>
+                          <span id="directory-files-processed">0</span> files processed
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <small id="directory-progress-status" class="text-muted mt-2 d-block">Preparing upload...</small>
+                    
+                    <!-- Progress Details -->
+                    <div id="directory-progress-details" class="mt-3" style="display: none;">
+                      <div class="row">
+                        <div class="col-12">
+                          <div class="progress-details-container">
+                            <h6 class="mb-2">Processing Details:</h6>
+                            <div id="directory-current-file" class="text-muted mb-2">
+                              <i class="fas fa-file-alt me-1"></i>
+                              <span>Waiting to start...</span>
+                            </div>
+                            <div id="directory-progress-log" class="progress-log" style="max-height: 150px; overflow-y: auto; font-size: 0.85em; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                              <!-- Progress messages will appear here -->
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Upload Information</h5>
+      </div>
+      <div class="card-body">
+        <h6>Supported File Types:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-file-pdf text-danger"></i> PDF Documents</li>
+          <li><i class="fas fa-file-word text-primary"></i> Word Documents (.docx)</li>
+          <li><i class="fas fa-file-alt text-secondary"></i> Text Files (.txt, .md)</li>
+          <li><i class="fas fa-file-code text-warning"></i> HTML Files</li>
+          <li><i class="fas fa-file-code text-info"></i> JSON/XML Files</li>
+          <li><i class="fas fa-file-csv text-success"></i> CSV Files</li>
+        </ul>
+        
+        <hr>
+        
+        <h6>Processing:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-cogs text-primary"></i> Automatic content extraction</li>
+          <li><i class="fas fa-cut text-success"></i> Intelligent text chunking</li>
+          <li><i class="fas fa-vector-square text-info"></i> Vector embedding generation</li>
+          <li><i class="fas fa-search text-warning"></i> Search optimization</li>
+        </ul>
+        
+        <hr>
+        
+        <h6>Features:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-tags text-primary"></i> Metadata extraction</li>
+          <li><i class="fas fa-language text-success"></i> Multi-language support</li>
+          <li><i class="fas fa-chart-line text-info"></i> Usage analytics</li>
+          <li><i class="fas fa-copy text-warning"></i> Duplicate detection</li>
+          <li><i class="fas fa-sync text-secondary"></i> Reprocessing support</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Check if ActionCable is available for progress tracking
+  let actionCableAvailable = false;
+  let progressTracker = null;
+  
+  // Wait a bit for CDN resources to load, then check ActionCable availability
+  function checkActionCableAvailability() {
+    try {
+      actionCableAvailable = typeof ActionCable !== 'undefined';
+      console.log('🔍 ActionCable availability check:', actionCableAvailable);
+      console.log('🔍 window.App exists:', !!window.App);
+      console.log('🔍 window.App.cable exists:', !!(window.App && window.App.cable));
+      return actionCableAvailable;
+    } catch (error) {
+      console.log('❌ ActionCable check failed:', error);
+      return false;
+    }
+  }
+  
+  // Initial check
+  actionCableAvailable = checkActionCableAvailability();
+  
+  // Update status indicator with re-check
+  function updateStatusIndicator() {
+    const statusEl = document.getElementById('websocket-status');
+    actionCableAvailable = checkActionCableAvailability();
+    
+    if (actionCableAvailable && statusEl) {
+      statusEl.className = 'alert alert-success mb-3';
+      statusEl.innerHTML = '<i class="fas fa-check-circle me-2"></i>Real-time progress tracking enabled';
+    } else if (statusEl) {
+      statusEl.className = 'alert alert-warning mb-3';
+      statusEl.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Limited functionality - progress tracking unavailable';
+    }
+  }
+  
+  // Initial update
+  updateStatusIndicator();
+  
+  // Re-check after a delay to account for CDN loading
+  setTimeout(function() {
+    updateStatusIndicator();
+    console.log('🔄 Re-checked ActionCable availability after delay');
+  }, 2000);
+  
+  // Generate a temporary session ID for ActionCable subscription
+  function generateTemporarySessionId() {
+    // Use crypto.randomUUID if available, otherwise fallback to timestamp + random
+    if (crypto && crypto.randomUUID) {
+      return crypto.randomUUID();
+    } else {
+      // Fallback: timestamp + random string
+      const timestamp = Date.now().toString(36);
+      const randomStr = Math.random().toString(36).substr(2, 9);
+      return `temp_${timestamp}_${randomStr}`;
+    }
+  }
+  
+  // Progress upload form handler
+  const progressForm = document.getElementById('progress-upload-form');
+  if (progressForm) {
+    console.log('📝 Progress form handler attached');
+    progressForm.addEventListener('submit', async function(e) {
+      console.log('🚀 Progress form submitted');
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('progress_files');
+      const submitBtn = document.getElementById('progress-upload-btn');
+      const progressContainer = document.getElementById('progress-container');
+      
+      // Validate files and log detailed information
+      if (!fileInput.files.length) {
+        alert('Please select at least one file.');
+        return;
+      }
+      
+      // Log detailed file selection information for debugging
+      console.log('📁 File selection analysis:');
+      console.log(`   Files selected by user: ${fileInput.files.length}`);
+      console.log('   File details:');
+      Array.from(fileInput.files).forEach((file, index) => {
+        console.log(`     ${index + 1}. ${file.name} (${file.size} bytes, ${file.type || 'unknown type'})`);
+      });
+      
+      // Set upload in progress flag
+      uploadInProgress = true;
+      
+      // Disable submit button
+      const originalBtnHtml = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+      
+      // Show progress container
+      if (progressContainer) {
+        progressContainer.style.display = 'block';
+        setupProgressDisplay(Array.from(fileInput.files));
+      }
+      
+      // Setup ActionCable connection BEFORE starting upload to ensure it's ready
+      let temporarySessionId = null;
+      if (checkActionCableAvailability()) {
+        // Generate a temporary session ID or use existing one
+        temporarySessionId = generateTemporarySessionId();
+        console.log('🎯 Setting up progress tracking BEFORE upload with temp session ID:', temporarySessionId);
+        
+        // Setup the subscription synchronously - we can't wait for connection in this context
+        setupProgressTracking(temporarySessionId);
+        updateProgressStatus('Connecting to real-time updates. Starting upload...');
+        
+        // Longer delay to ensure ActionCable subscription is fully established
+        console.log('⏰ Waiting for ActionCable subscription to establish...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log('✅ ActionCable delay complete, starting upload');
+      } else {
+        console.warn('⚠️ ActionCable not available, will use fallback mode');
+        updateProgressStatus('Starting upload (real-time updates unavailable)...');
+      }
+      
+      try {
+        const formData = new FormData(progressForm);
+        
+        // Add the temporary session ID to the form data so backend uses it
+        if (temporarySessionId) {
+          formData.append('temp_session_id', temporarySessionId);
+        }
+        
+        // Add force duplicate setting if checked
+        const forceDuplicateCheckbox = document.getElementById('progress_force_duplicate');
+        if (forceDuplicateCheckbox && forceDuplicateCheckbox.checked) {
+          formData.append('ragdoll_document[force_duplicate]', '1');
+        }
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        
+        console.log('🚀 Sending upload request...');
+        const response = await fetch(progressForm.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRF-Token': csrfToken ? csrfToken.content : ''
+          }
+        });
+        
+        console.log('📨 Upload response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('📊 Upload result parsed:', result);
+        console.log('🎯 Processing upload success...');
+        
+        if (result.success) {
+          console.log('✅ Upload successful, processing has started');
+          console.log('📡 Server session ID:', result.session_id);
+          console.log('📡 Temp session ID used:', temporarySessionId);
+          console.log('📊 Processing results:', result.results);
+          
+          // Check if any files were processed synchronously
+          const syncResults = result.results?.filter(r => r.status === 'completed_sync') || [];
+          const queuedResults = result.results?.filter(r => r.status === 'queued') || [];
+          const failedResults = result.results?.filter(r => r.status === 'failed') || [];
+          
+          if (syncResults.length > 0) {
+            console.log('📋 Files processed synchronously:', syncResults);
+            // Update progress display for sync results
+            syncResults.forEach((syncResult, index) => {
+              const fileIndex = fileMapping.get(syncResult.file);
+              if (fileIndex !== undefined) {
+                updateFileStatus(fileIndex, 'completed', 'Processed successfully ✓');
+              }
+            });
+            
+            // Calculate overall progress
+            calculateOverallProgress();
+            
+            if (queuedResults.length === 0) {
+              // All files processed synchronously
+              updateProgressStatus('🎉 All files processed successfully! Redirecting...');
+              setTimeout(() => {
+                window.location.href = '<%= ragdoll.documents_path %>';
+              }, 2000);
+            } else {
+              updateProgressStatus(`${syncResults.length} files processed immediately, ${queuedResults.length} queued for background processing...`);
+            }
+          }
+          
+          if (queuedResults.length > 0 && actionCableAvailable) {
+            // If we have a different session ID from server, update our subscription
+            if (result.session_id && result.session_id !== temporarySessionId) {
+              console.log('🔄 Server provided different session ID, updating subscription...');
+              // Unsubscribe from old channel
+              if (progressTracker) {
+                progressTracker.unsubscribe();
+              }
+              // Subscribe to correct channel
+              setupProgressTracking(result.session_id);
+            }
+            
+            updateProgressStatus('Upload successful! Background processing started with real-time tracking...');
+          } else if (queuedResults.length > 0) {
+            updateProgressStatus(`${queuedResults.length} files queued for background processing (real-time updates unavailable)...`);
+            // Redirect after a delay since we can't track progress
+            setTimeout(() => {
+              window.location.href = '<%= ragdoll.documents_path %>';
+            }, 3000);
+          }
+          
+          if (failedResults.length > 0) {
+            console.error('❌ Some files failed:', failedResults);
+            failedResults.forEach((failedResult, index) => {
+              const fileIndex = fileMapping.get(failedResult.file);
+              if (fileIndex !== undefined) {
+                updateFileStatus(fileIndex, 'failed', `Error: ${failedResult.error}`);
+              }
+            });
+          }
+          
+          // Clear upload flag since upload phase is complete
+          uploadInProgress = false;
+          
+          // Clear form
+          fileInput.value = '';
+          
+        } else {
+          throw new Error(result.error || 'Upload failed');
+        }
+        
+      } catch (error) {
+        console.error('💥 Upload error:', error);
+        console.error('💥 Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+        updateProgressStatus('Upload failed: ' + error.message, 'danger');
+        alert('Upload failed: ' + error.message);
+        
+        // Clear upload flag on error
+        uploadInProgress = false;
+        
+        // Re-enable submit button only on error
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHtml;
+      }
+    });
+  }
+  
+  // Store file mapping for progress tracking
+  let fileMapping = new Map();
+  let fileTimeouts = new Map(); // Track timeouts for each file
+  const FILE_TIMEOUT = 10 * 60 * 1000; // 10 minutes timeout
+  
+  // Setup progress display for files
+  function setupProgressDisplay(files) {
+    const fileStatusList = document.getElementById('file-status-list');
+    const overallProgressBar = document.getElementById('overall-progress-bar');
+    const overallPercentage = document.getElementById('overall-percentage');
+    
+    if (!fileStatusList) return;
+    
+    // Create file status items and store mapping
+    fileStatusList.innerHTML = '';
+    fileMapping.clear();
+    
+    files.forEach((file, index) => {
+      const fileItem = document.createElement('div');
+      fileItem.className = 'mb-2 p-2 border rounded bg-light';
+      fileItem.id = `file-${index}`;
+      fileItem.setAttribute('data-filename', file.name);
+      fileItem.innerHTML = `
+        <div class="d-flex align-items-center justify-content-between">
+          <span><i class="fas fa-file me-2"></i>${file.name}</span>
+          <div class="d-flex align-items-center">
+            <small class="text-muted me-2" id="file-status-${index}">Queued</small>
+            <i class="fas fa-clock text-muted" id="file-icon-${index}"></i>
+          </div>
+        </div>
+      `;
+      fileStatusList.appendChild(fileItem);
+      
+      // Store mapping for easy lookup
+      fileMapping.set(file.name, index);
+      console.log(`📝 Mapped file "${file.name}" to index ${index}`);
+      
+      // Set up timeout for this file
+      const timeoutId = setTimeout(() => {
+        handleFileTimeout(file.name, index);
+      }, FILE_TIMEOUT);
+      fileTimeouts.set(file.name, timeoutId);
+    });
+    
+    console.log('🗺️ Final file mapping:', Array.from(fileMapping.entries()));
+    
+    // Initialize progress
+    updateOverallProgress(0);
+    updateProgressStatus('Files uploaded, starting background processing...');
+  }
+  
+  // Setup ActionCable progress tracking (sync version for immediate use)
+  function setupProgressTracking(sessionId) {
+    console.log('🚀 Setting up progress tracking for session (sync):', sessionId);
+    console.log('📊 Current ActionCable state:', {
+      ActionCable: typeof ActionCable,
+      windowApp: !!window.App,
+      appCable: !!(window.App && window.App.cable)
+    });
+    
+    // Final check for ActionCable availability
+    if (!checkActionCableAvailability()) {
+      console.warn('❌ ActionCable not available, skipping progress tracking');
+      updateProgressStatus('Real-time updates not available, using basic mode', 'warning');
+      return;
+    }
+    
+    try {
+      // Ensure App.cable is initialized
+      if (!window.App) {
+        window.App = {};
+      }
+      
+      if (!window.App.cable && typeof ActionCable !== 'undefined') {
+        console.log('🔧 Initializing App.cable...');
+        window.App.cable = ActionCable.createConsumer('/cable');
+      }
+      
+      const consumer = window.App.cable;
+      console.log('📡 Using consumer:', consumer);
+      
+      if (!consumer) {
+        throw new Error('No ActionCable consumer available');
+      }
+      
+      progressTracker = consumer.subscriptions.create(
+        {
+          channel: "Ragdoll::FileProcessingChannel", 
+          session_id: sessionId
+        },
+        {
+          received: function(data) {
+            console.log('📡 ActionCable data received:', data);
+            
+            if (data.type === 'ping') {
+              console.log('🏓 Ping response received:', data.message);
+              return;
+            }
+            
+            handleProgressUpdate(data);
+          },
+          connected: function() {
+            console.log('✅ Connected to Ragdoll::FileProcessingChannel with session:', sessionId);
+            updateProgressStatus('Connected to real-time updates. Processing will begin shortly...');
+            
+            // Test if the connection is really working by sending a ping
+            console.log('🏓 Testing ActionCable connection...');
+            this.perform('test_connection');
+          },
+          disconnected: function() {
+            console.log('❌ Disconnected from Ragdoll::FileProcessingChannel');
+            updateProgressStatus('Lost connection to real-time updates', 'warning');
+          },
+          rejected: function() {
+            console.log('❌ Connection rejected to Ragdoll::FileProcessingChannel');
+            updateProgressStatus('Connection rejected - channel may not exist', 'danger');
+          }
+        }
+      );
+      console.log('📡 Subscription created:', progressTracker);
+    } catch (error) {
+      console.error('💥 Failed to setup progress tracking:', error);
+      updateProgressStatus('Failed to setup real-time updates: ' + error.message, 'danger');
+    }
+  }
+  
+  // Handle progress updates from ActionCable
+  function handleProgressUpdate(data) {
+    console.log('📡 Progress update received:', data);
+    console.log('📊 Data breakdown:', {
+      file_id: data.file_id,
+      filename: data.filename,
+      status: data.status,
+      progress: data.progress,
+      message: data.message
+    });
+    
+    const { file_id, filename, status, progress, message } = data;
+    
+    // Find corresponding file by name using our mapping
+    console.log('🔍 Looking for file in mapping:', filename);
+    console.log('🗺️ Current file mapping:', Array.from(fileMapping.entries()));
+    
+    const fileIndex = fileMapping.get(filename);
+    if (fileIndex === undefined) {
+      console.warn('❌ File not found in mapping:', filename);
+      console.log('📋 Available files in mapping:', Array.from(fileMapping.keys()));
+      return;
+    }
+    
+    console.log('✅ Found file at index:', fileIndex);
+    
+    const fileItem = document.getElementById(`file-${fileIndex}`);
+    const statusSpan = document.getElementById(`file-status-${fileIndex}`);
+    const iconSpan = document.getElementById(`file-icon-${fileIndex}`);
+    
+    if (!fileItem || !statusSpan) {
+      console.warn('File UI elements not found for index:', fileIndex);
+      return;
+    }
+    
+    // Update status and visual indicators
+    if (status === 'started') {
+      statusSpan.textContent = 'Processing...';
+      iconSpan.className = 'fas fa-spinner fa-spin text-primary';
+      fileItem.className = 'mb-2 p-2 border rounded bg-primary text-white';
+      updateProgressStatus(`Processing ${filename}...`);
+    } else if (status === 'processing') {
+      statusSpan.textContent = `${progress}% - ${message}`;
+      iconSpan.className = 'fas fa-cog fa-spin text-primary';
+    } else if (status === 'completed') {
+      statusSpan.textContent = 'Complete ✓';
+      iconSpan.className = 'fas fa-check-circle text-success';
+      fileItem.className = 'mb-2 p-2 border rounded bg-success text-white';
+      clearFileTimeout(filename);
+      calculateOverallProgress();
+    } else if (status === 'error') {
+      statusSpan.textContent = 'Error: ' + message;
+      iconSpan.className = 'fas fa-exclamation-circle text-danger';
+      fileItem.className = 'mb-2 p-2 border rounded bg-danger text-white';
+      clearFileTimeout(filename);
+      calculateOverallProgress();
+    }
+  }
+  
+  // Calculate overall progress based on completed files
+  function calculateOverallProgress() {
+    const fileStatusList = document.getElementById('file-status-list');
+    if (!fileStatusList) return;
+    
+    const totalFiles = fileStatusList.children.length;
+    let completedFiles = 0;
+    let errorFiles = 0;
+    
+    for (const fileItem of fileStatusList.children) {
+      if (fileItem.className.includes('bg-success')) {
+        completedFiles++;
+      } else if (fileItem.className.includes('bg-danger')) {
+        completedFiles++;
+        errorFiles++;
+      }
+    }
+    
+    const percentage = Math.round((completedFiles / totalFiles) * 100);
+    updateOverallProgress(percentage);
+    
+    if (completedFiles === totalFiles) {
+      const successFiles = completedFiles - errorFiles;
+      if (errorFiles > 0) {
+        updateProgressStatus(`Processing complete! ${successFiles} successful, ${errorFiles} failed. Check the Documents page for details.`);
+      } else {
+        updateProgressStatus('🎉 All files processed successfully! Redirecting...');
+      }
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        window.location.href = '<%= ragdoll.documents_path %>';
+      }, 3000);
+    } else {
+      const processingFiles = totalFiles - completedFiles;
+      updateProgressStatus(`Processing ${completedFiles}/${totalFiles} files (${processingFiles} remaining)...`);
+    }
+  }
+  
+  // Update overall progress bar
+  function updateOverallProgress(percentage) {
+    const progressBar = document.getElementById('overall-progress-bar');
+    const percentageSpan = document.getElementById('overall-percentage');
+    
+    if (progressBar) {
+      progressBar.style.width = percentage + '%';
+      progressBar.setAttribute('aria-valuenow', percentage);
+      progressBar.textContent = percentage + '%';
+      
+      if (percentage === 100) {
+        progressBar.className = 'progress-bar bg-success';
+      }
+    }
+    
+    if (percentageSpan) {
+      percentageSpan.textContent = percentage + '%';
+    }
+  }
+  
+  // Update progress status message
+  function updateProgressStatus(message, type = 'info') {
+    const statusEl = document.getElementById('progress-status');
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.className = `text-${type === 'danger' ? 'danger' : 'muted'} mt-2 d-block`;
+    }
+  }
+  
+  // Handle file timeout
+  function handleFileTimeout(filename, fileIndex) {
+    console.warn(`⏰ File timeout detected for: ${filename}`);
+    
+    const fileItem = document.getElementById(`file-${fileIndex}`);
+    const statusSpan = document.getElementById(`file-status-${fileIndex}`);
+    const iconSpan = document.getElementById(`file-icon-${fileIndex}`);
+    
+    if (fileItem && statusSpan) {
+      // Check if file is still in progress (not completed or errored)
+      if (!fileItem.className.includes('bg-success') && !fileItem.className.includes('bg-danger')) {
+        statusSpan.textContent = 'Timeout - job may be stuck';
+        iconSpan.className = 'fas fa-clock text-warning';
+        fileItem.className = 'mb-2 p-2 border rounded bg-warning text-dark';
+        
+        updateProgressStatus(`File processing timeout detected for ${filename}. This may indicate a stuck job.`);
+        calculateOverallProgress();
+      }
+    }
+    
+    // Clean up the timeout
+    fileTimeouts.delete(filename);
+  }
+  
+  // Clear file timeout
+  function clearFileTimeout(filename) {
+    const timeoutId = fileTimeouts.get(filename);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      fileTimeouts.delete(filename);
+      console.log(`🧹 Cleared timeout for: ${filename}`);
+    }
+  }
+  
+  // Update individual file status
+  function updateFileStatus(fileIndex, status, message) {
+    const fileItem = document.getElementById(`file-${fileIndex}`);
+    const statusSpan = document.getElementById(`file-status-${fileIndex}`);
+    const iconSpan = document.getElementById(`file-icon-${fileIndex}`);
+    
+    if (!fileItem || !statusSpan) {
+      console.warn('File UI elements not found for index:', fileIndex);
+      return;
+    }
+    
+    // Update status and visual indicators
+    if (status === 'completed') {
+      statusSpan.textContent = message || 'Complete ✓';
+      iconSpan.className = 'fas fa-check-circle text-success';
+      fileItem.className = 'mb-2 p-2 border rounded bg-success text-white';
+    } else if (status === 'failed') {
+      statusSpan.textContent = message || 'Failed ✗';
+      iconSpan.className = 'fas fa-exclamation-circle text-danger';
+      fileItem.className = 'mb-2 p-2 border rounded bg-danger text-white';
+    } else if (status === 'processing') {
+      statusSpan.textContent = message || 'Processing...';
+      iconSpan.className = 'fas fa-cog fa-spin text-primary';
+      fileItem.className = 'mb-2 p-2 border rounded bg-primary text-white';
+    }
+  }
+  
+  // Track upload state to show navigation warnings
+  let uploadInProgress = false;
+  
+  // Warn user before leaving during upload
+  function handleBeforeUnload(e) {
+    if (uploadInProgress) {
+      const confirmationMessage = 'Upload in progress! Leaving this page will cancel the upload. Are you sure you want to leave?';
+      e.preventDefault();
+      e.returnValue = confirmationMessage;
+      return confirmationMessage;
+    }
+  }
+  
+  // Add beforeunload listener
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  // Directory upload form handler
+  const directoryForm = document.getElementById('directory-upload-form');
+  const directoryInput = document.getElementById('directory_files');
+  
+  if (directoryInput) {
+    // Set webkitdirectory attribute (Rails data helper doesn't work for this)
+    directoryInput.setAttribute('webkitdirectory', '');
+    
+    // Show directory selection info
+    directoryInput.addEventListener('change', function() {
+      const files = this.files;
+      if (files.length > 0) {
+        // Get directory name from first file path
+        const firstFile = files[0];
+        const pathParts = firstFile.webkitRelativePath.split('/');
+        const directoryName = pathParts[0];
+        
+        // Update form text with selection info
+        const formText = directoryInput.nextElementSibling;
+        if (formText && formText.classList.contains('form-text')) {
+          formText.innerHTML = `Selected directory: <strong>${directoryName}</strong> (${files.length} files)`;
+        }
+      }
+    });
+  }
+  
+  // Function to attach directory form listener
+  function attachDirectoryFormListener() {
+    const directoryForm = document.getElementById('directory-upload-form');
+    if (directoryForm && !directoryForm.ragdollListenerAttached) {
+      console.log('📋 Attaching directory form event listener...');
+      directoryForm.ragdollListenerAttached = true; // Prevent duplicate listeners
+      
+      directoryForm.addEventListener('submit', function(e) {
+      e.preventDefault(); // Prevent default form submission
+      
+      const submitBtn = document.getElementById('directory-upload-btn');
+      const processingAlert = document.getElementById('directory-processing-alert');
+      const progressContainer = document.getElementById('directory-progress-container');
+      const fileInput = document.getElementById('directory_files');
+      
+      // Validate files
+      if (!fileInput.files.length) {
+        alert('Please select a directory.');
+        return;
+      }
+      
+      // Set upload in progress flag
+      uploadInProgress = true;
+      
+      if (submitBtn) {
+        const spinner = submitBtn.querySelector('.spinner-border');
+        const btnText = submitBtn.querySelector('.btn-text');
+        
+        submitBtn.disabled = true;
+        if (spinner) spinner.classList.remove('d-none');
+        if (btnText) btnText.textContent = 'Importing...';
+      }
+      
+      if (processingAlert) {
+        processingAlert.classList.remove('d-none');
+      }
+      
+      // Show progress container
+      if (progressContainer) {
+        progressContainer.style.display = 'block';
+        setupDirectoryProgress(fileInput.files);
+      }
+      
+      // Initialize bulk upload status popup if available
+      if (window.bulkUploadStatus) {
+        const sessionId = generateTemporarySessionId();
+        window.bulkUploadStatus.startUpload(sessionId, fileInput.files.length);
+        
+        // Store session ID for later use
+        window.currentUploadSessionId = sessionId;
+      }
+      
+      // Submit form using fetch for better progress control
+      submitDirectoryUpload();
+    });
+    } else if (directoryForm) {
+      console.log('📋 Directory form listener already attached');
+    } else {
+      console.log('📋 Directory form not found');
+    }
+  }
+  
+  // Try to attach the listener immediately
+  attachDirectoryFormListener();
+  
+  // Also try when the directory tab becomes active
+  const directoryTab = document.getElementById('directory-tab');
+  if (directoryTab) {
+    directoryTab.addEventListener('shown.bs.tab', function() {
+      console.log('📋 Directory tab activated, attaching listener...');
+      attachDirectoryFormListener();
+    });
+  }
+  
+  // Setup directory progress display
+  function setupDirectoryProgress(files) {
+    const totalFiles = files.length;
+    
+    // Initialize progress display
+    document.getElementById('directory-total-files').textContent = totalFiles;
+    document.getElementById('directory-files-uploaded').textContent = '0';
+    document.getElementById('directory-files-processed').textContent = '0';
+    updateDirectoryUploadProgress(0);
+    updateDirectoryProcessingProgress(0);
+    updateDirectoryProgressStatus('Starting upload...');
+  }
+  
+  // Submit directory upload with progress tracking
+  async function submitDirectoryUpload() {
+    const form = document.getElementById('directory-upload-form');
+    const formData = new FormData(form);
+    
+    // Use stored session ID or generate new one
+    const sessionId = window.currentUploadSessionId || generateTemporarySessionId();
+    formData.append('temp_session_id', sessionId);
+    
+    // Add force duplicate setting if checked
+    const directoryForceDuplicateCheckbox = document.getElementById('directory_force_duplicate');
+    if (directoryForceDuplicateCheckbox && directoryForceDuplicateCheckbox.checked) {
+      formData.append('force_duplicate', '1');
+    }
+    
+    // Setup ActionCable for directory progress if available
+    if (checkActionCableAvailability()) {
+      setupDirectoryProgressTracking(sessionId);
+    }
+    
+    try {
+      updateDirectoryProgressStatus('Uploading files to server...');
+      
+      const csrfToken = document.querySelector('meta[name="csrf-token"]');
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-Token': csrfToken ? csrfToken.content : '',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      // Simulate upload completion (since we don't have real upload progress from server)
+      updateDirectoryUploadProgress(100);
+      updateDirectoryProgressStatus('Upload complete! Files queued for processing...');
+      
+      const result = await response.json(); // Parse JSON response
+      
+      // Clear upload flag since upload phase is complete
+      uploadInProgress = false;
+      
+      if (result.success) {
+        console.log('✅ Directory upload successful:', result);
+        console.log('📡 Session ID for tracking:', result.session_id);
+        console.log('📁 Files queued:', result.file_count);
+        
+        // Update the bulk upload status popup to track this session
+        if (window.bulkUploadStatus && result.session_id) {
+          // The popup is already started from form submission, just update status
+          updateDirectoryProgressStatus(`${result.file_count} files queued for background processing. Tracking progress...`);
+        }
+        
+        // DON'T redirect immediately - let the popup track the background job
+        // The popup will handle the redirect when processing is complete
+        
+        // Hide the in-page progress indicators since the popup is handling it
+        const progressContainer = document.getElementById('directory-progress-container');
+        if (progressContainer) {
+          setTimeout(() => {
+            progressContainer.style.display = 'none';
+          }, 3000);
+        }
+        
+        // Re-enable the form for another upload if needed
+        const submitBtn = document.getElementById('directory-upload-btn');
+        if (submitBtn) {
+          const spinner = submitBtn.querySelector('.spinner-border');
+          const btnText = submitBtn.querySelector('.btn-text');
+          
+          submitBtn.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+          if (btnText) btnText.textContent = 'Import Directory';
+        }
+        
+        // Hide processing alert
+        const processingAlert = document.getElementById('directory-processing-alert');
+        if (processingAlert) {
+          processingAlert.classList.add('d-none');
+        }
+      } else {
+        // Handle error response
+        updateDirectoryProgressStatus('Upload failed: ' + (result.error || 'Unknown error'));
+        
+        // Re-enable form on error
+        const submitBtn = document.getElementById('directory-upload-btn');
+        if (submitBtn) {
+          const spinner = submitBtn.querySelector('.spinner-border');
+          const btnText = submitBtn.querySelector('.btn-text');
+          
+          submitBtn.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+          if (btnText) btnText.textContent = 'Import Directory';
+        }
+      }
+      
+    } catch (error) {
+      console.error('Directory upload error:', error);
+      updateDirectoryProgressStatus('Upload failed: ' + error.message);
+      
+      // Clear upload flag on error
+      uploadInProgress = false;
+      
+      // Re-enable form
+      const submitBtn = document.getElementById('directory-upload-btn');
+      if (submitBtn) {
+        const spinner = submitBtn.querySelector('.spinner-border');
+        const btnText = submitBtn.querySelector('.btn-text');
+        
+        submitBtn.disabled = false;
+        if (spinner) spinner.classList.add('d-none');
+        if (btnText) btnText.textContent = 'Import Directory';
+      }
+    }
+  }
+  
+  // Setup ActionCable progress tracking for directory uploads
+  function setupDirectoryProgressTracking(sessionId) {
+    console.log('Setting up directory progress tracking for session:', sessionId);
+    
+    if (!checkActionCableAvailability()) {
+      console.warn('ActionCable not available for directory progress tracking');
+      return;
+    }
+    
+    try {
+      if (!window.App) window.App = {};
+      if (!window.App.cable && typeof ActionCable !== 'undefined') {
+        window.App.cable = ActionCable.createConsumer('/cable');
+      }
+      
+      const consumer = window.App.cable;
+      if (!consumer) {
+        console.warn('No ActionCable consumer available for directory tracking');
+        return;
+      }
+      
+      const directoryProgressTracker = consumer.subscriptions.create(
+        {
+          channel: "Ragdoll::FileProcessingChannel", 
+          session_id: sessionId
+        },
+        {
+          received: function(data) {
+            console.log('Directory progress update received:', data);
+            handleDirectoryProgressUpdate(data);
+          },
+          connected: function() {
+            console.log('Connected to directory progress tracking');
+            updateDirectoryProgressStatus('Connected to real-time updates...');
+          },
+          disconnected: function() {
+            console.log('Disconnected from directory progress tracking');
+          }
+        }
+      );
+      
+    } catch (error) {
+      console.error('Failed to setup directory progress tracking:', error);
+    }
+  }
+  
+  // Handle directory progress updates with enhanced tracking
+  function handleDirectoryProgressUpdate(data) {
+    console.log('📊 Directory progress update:', data);
+    
+    const progressBar = document.getElementById('directory-processing-progress');
+    const progressText = document.getElementById('directory-progress-percentage');
+    const processedCount = document.getElementById('directory-files-processed');
+    const totalCount = document.getElementById('directory-total-files');
+    const currentFile = document.getElementById('directory-current-file');
+    const progressLog = document.getElementById('directory-progress-log');
+    const progressDetails = document.getElementById('directory-progress-details');
+    
+    // Show progress details section
+    if (progressDetails) {
+      progressDetails.style.display = 'block';
+    }
+    
+    if (data.type === 'file_progress') {
+      // Individual file being processed
+      const percentage = data.percentage || 0;
+      
+      if (progressBar) {
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.textContent = percentage.toFixed(1) + '%';
+      }
+      
+      if (progressText) {
+        progressText.textContent = percentage.toFixed(1) + '%';
+      }
+      
+      if (processedCount) {
+        processedCount.textContent = data.processed || 0;
+      }
+      
+      if (totalCount) {
+        totalCount.textContent = data.total || 0;
+      }
+      
+      if (currentFile) {
+        currentFile.innerHTML = `<i class="fas fa-cogs text-primary me-1"></i><span>Processing: ${data.filename}</span>`;
+      }
+      
+      // Add to progress log
+      if (progressLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1 text-muted';
+        logEntry.innerHTML = `<i class="fas fa-spinner fa-spin text-primary me-1"></i>Processing: ${data.filename}`;
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+      
+      updateDirectoryProgressStatus(`Processing ${data.filename}... (${data.processed}/${data.total} files)`);
+      
+    } else if (data.type === 'file_complete') {
+      // File completed successfully
+      const percentage = data.percentage || 0;
+      
+      if (progressBar) {
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.textContent = percentage.toFixed(1) + '%';
+      }
+      
+      if (processedCount) {
+        processedCount.textContent = data.processed || 0;
+      }
+      
+      // Update log with success
+      if (progressLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1 text-success';
+        logEntry.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>Completed: ${data.filename}`;
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+      
+      updateDirectoryProgressStatus(`Completed ${data.filename} (${data.processed}/${data.total} files)`);
+      
+    } else if (data.type === 'file_error') {
+      // File failed
+      const percentage = data.percentage || 0;
+      
+      if (progressBar) {
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressBar.textContent = percentage.toFixed(1) + '%';
+      }
+      
+      // Update log with error
+      if (progressLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1 text-danger';
+        logEntry.innerHTML = `<i class="fas fa-exclamation-circle text-danger me-1"></i>Failed: ${data.filename} - ${data.error || 'Unknown error'}`;
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+      
+      updateDirectoryProgressStatus(`Error processing ${data.filename}: ${data.error || 'Unknown error'}`);
+      
+    } else if (data.type === 'bulk_complete') {
+      // All files completed
+      if (progressBar) {
+        progressBar.style.width = '100%';
+        progressBar.setAttribute('aria-valuenow', 100);
+        progressBar.textContent = '100%';
+        progressBar.className = 'progress-bar bg-success';
+      }
+      
+      if (progressText) {
+        progressText.textContent = '100%';
+      }
+      
+      if (currentFile) {
+        currentFile.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i><span>All files processed!</span>`;
+      }
+      
+      // Add completion summary to log
+      if (progressLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1 text-success fw-bold';
+        logEntry.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>Bulk processing completed! ${data.processed}/${data.total} successful${data.failed > 0 ? `, ${data.failed} failed` : ''}`;
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+      
+      const message = `Bulk processing completed! ${data.processed}/${data.total} files processed successfully`;
+      const failedMessage = data.failed > 0 ? ` (${data.failed} failed: ${data.failed_files.join(', ')})` : '';
+      updateDirectoryProgressStatus(message + failedMessage);
+      
+      // Redirect after delay
+      setTimeout(() => {
+        window.location.href = '<%= ragdoll.documents_path %>';
+      }, 3000);
+      
+    } else if (data.type === 'job_error') {
+      // Job completely failed
+      if (progressBar) {
+        progressBar.className = 'progress-bar bg-danger';
+      }
+      
+      if (currentFile) {
+        currentFile.innerHTML = `<i class="fas fa-exclamation-circle text-danger me-1"></i><span>Processing failed</span>`;
+      }
+      
+      if (progressLog) {
+        const logEntry = document.createElement('div');
+        logEntry.className = 'mb-1 text-danger fw-bold';
+        logEntry.innerHTML = `<i class="fas fa-exclamation-circle text-danger me-1"></i>Job failed: ${data.error}`;
+        progressLog.appendChild(logEntry);
+        progressLog.scrollTop = progressLog.scrollHeight;
+      }
+      
+      updateDirectoryProgressStatus(`Processing failed: ${data.error}`);
+    }
+    
+    // Legacy compatibility for old data format
+    if (data.total_files && data.completed_files !== undefined) {
+      const processingPercentage = Math.round((data.completed_files / data.total_files) * 100);
+      updateDirectoryProcessingProgress(processingPercentage);
+      
+      if (processedCount) {
+        processedCount.textContent = data.completed_files;
+      }
+      
+      if (data.status === 'completed') {
+        updateDirectoryProgressStatus(`Processing ${data.filename}... (${data.completed_files}/${data.total_files} complete)`);
+      } else if (status === 'error') {
+        updateDirectoryProgressStatus(`Error processing ${filename}: ${progress || 'Unknown error'}`);
+      }
+      
+      // Check if all files are complete
+      if (completed_files >= total_files) {
+        updateDirectoryProgressStatus('All files processed successfully! Redirecting...');
+        setTimeout(() => {
+          window.location.href = '<%= ragdoll.documents_path %>';
+        }, 2000);
+      }
+    }
+  }
+  
+  // Update directory upload progress bar
+  function updateDirectoryUploadProgress(percentage) {
+    const progressBar = document.getElementById('directory-upload-progress-bar');
+    const percentageSpan = document.getElementById('directory-upload-percentage');
+    
+    if (progressBar) {
+      progressBar.style.width = percentage + '%';
+      progressBar.setAttribute('aria-valuenow', percentage);
+      progressBar.textContent = percentage + '%';
+    }
+    
+    if (percentageSpan) {
+      percentageSpan.textContent = percentage + '%';
+    }
+  }
+  
+  // Update directory processing progress bar
+  function updateDirectoryProcessingProgress(percentage) {
+    const progressBar = document.getElementById('directory-processing-progress-bar');
+    const percentageSpan = document.getElementById('directory-processing-percentage');
+    
+    if (progressBar) {
+      progressBar.style.width = percentage + '%';
+      progressBar.setAttribute('aria-valuenow', percentage);
+      progressBar.textContent = percentage + '%';
+    }
+    
+    if (percentageSpan) {
+      percentageSpan.textContent = percentage + '%';
+    }
+  }
+  
+  // Update directory progress status message
+  function updateDirectoryProgressStatus(message) {
+    const statusEl = document.getElementById('directory-progress-status');
+    if (statusEl) {
+      statusEl.textContent = message;
+    }
+  }
+  
+  // Text content form handler
+  const textForms = document.querySelectorAll('form');
+  textForms.forEach(function(form) {
+    if (form.querySelector('textarea[name*="text_content"]')) {
+      form.addEventListener('submit', function() {
+        const submitBtn = document.getElementById('text-content-btn');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        }
+      });
+    }
+  });
+  
+  // Form validation
+  const forms = document.querySelectorAll('.needs-validation');
+  forms.forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    }, false);
+  });
+});
+</script>
+
+<% if @document&.errors&.any? %>
+  <div class="alert alert-danger mt-3">
+    <h5>Errors:</h5>
+    <ul class="mb-0">
+      <% @document.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>

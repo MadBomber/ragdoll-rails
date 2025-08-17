@@ -1,0 +1,302 @@
+<% content_for :title, "Documents - Ragdoll Engine" %>
+
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="fas fa-file-alt"></i> Documents</h1>
+      <%= link_to "Add Document", ragdoll.new_document_path, class: "btn btn-primary" %>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-filter"></i> Filters</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: ragdoll.documents_path, method: :get, local: true, class: "row g-3" do |form| %>
+          <div class="col-md-3">
+            <%= form.text_field :search, placeholder: "Search documents...", value: params[:search], class: "form-control" %>
+          </div>
+          <div class="col-md-3">
+            <%= form.select :document_type, options_for_select([["All Types", ""]] + @document_types.map { |type| [type.titleize, type] }, params[:document_type]), {}, { class: "form-select" } %>
+          </div>
+          <div class="col-md-3">
+            <%= form.select :status, options_for_select([["All Statuses", ""]] + @statuses.map { |status| [status.titleize, status] }, params[:status]), {}, { class: "form-select" } %>
+          </div>
+          <div class="col-md-3">
+            <%= form.submit "Filter", class: "btn btn-outline-primary" %>
+            <%= link_to "Clear", ragdoll.documents_path, class: "btn btn-outline-secondary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @documents.any? %>
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Document List</h5>
+            <div class="d-flex align-items-center gap-2">
+              <!-- View Toggle Buttons -->
+              <div class="btn-group btn-group-sm me-3" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-secondary" id="card-view-btn" onclick="switchToCardView()">
+                  <i class="fas fa-th-large"></i> Cards
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="table-view-btn" onclick="switchToTableView()">
+                  <i class="fas fa-table"></i> Table
+                </button>
+              </div>
+              
+              <!-- Bulk Action Buttons -->
+              <button class="btn btn-outline-danger btn-sm" onclick="bulkDelete()">
+                <i class="fas fa-trash"></i> Delete Selected
+              </button>
+              <button class="btn btn-outline-warning btn-sm" onclick="bulkReprocess()">
+                <i class="fas fa-sync"></i> Reprocess Selected
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Card View -->
+          <div id="card-view" style="display: block;">
+            <%= render Ragdoll::DocumentListComponent.new(documents: @documents) %>
+          </div>
+          
+          <!-- Table View -->
+          <div id="table-view" style="display: none;">
+            <%= render Ragdoll::DocumentTableComponent.new(documents: @documents) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% else %>
+  <div class="row">
+    <div class="col-12">
+      <%= render Ragdoll::EmptyStateComponent.new(
+        title: "No documents found",
+        message: "Get started by adding your first document to the system.",
+        icon: "fas fa-file-alt",
+        action_path: ragdoll.new_document_path,
+        action_text: "Add Document"
+      ) %>
+    </div>
+  </div>
+<% end %>
+
+<%= content_for :javascript do %>
+<script>
+// View switching functions
+function switchToCardView() {
+  document.getElementById('card-view').style.display = 'block';
+  document.getElementById('table-view').style.display = 'none';
+  document.getElementById('card-view-btn').classList.add('active');
+  document.getElementById('table-view-btn').classList.remove('active');
+  localStorage.setItem('ragdoll-document-view', 'card');
+}
+
+function switchToTableView() {
+  document.getElementById('card-view').style.display = 'none';
+  document.getElementById('table-view').style.display = 'block';
+  document.getElementById('table-view-btn').classList.add('active');
+  document.getElementById('card-view-btn').classList.remove('active');
+  localStorage.setItem('ragdoll-document-view', 'table');
+}
+
+// Attach event listeners to document checkboxes
+function attachCheckboxListeners() {
+  document.querySelectorAll('.document-checkbox').forEach(checkbox => {
+    checkbox.removeEventListener('change', updateSelectAllState); // Remove first to avoid duplicates
+    checkbox.addEventListener('change', updateSelectAllState);
+  });
+  updateSelectAllState(); // Initialize state
+}
+
+// Initialize view based on saved preference
+document.addEventListener('DOMContentLoaded', function() {
+  const savedView = localStorage.getItem('ragdoll-document-view') || 'card';
+  if (savedView === 'table') {
+    switchToTableView();
+  } else {
+    switchToCardView();
+  }
+  
+  // Attach listeners after view is set
+  setTimeout(attachCheckboxListeners, 100);
+});
+
+function toggleAll(source) {
+  // Get all document checkboxes
+  const checkboxes = document.querySelectorAll('.document-checkbox');
+  const selectAllCard = document.getElementById('select-all');
+  const selectAllTable = document.getElementById('select-all-table');
+  
+  // Set all checkboxes to match the source checkbox state
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = source.checked;
+  });
+  
+  // Sync both select-all checkboxes
+  if (selectAllCard) {
+    selectAllCard.checked = source.checked;
+    selectAllCard.indeterminate = false;
+  }
+  if (selectAllTable) {
+    selectAllTable.checked = source.checked;
+    selectAllTable.indeterminate = false;
+  }
+}
+
+function updateSelectAllState() {
+  // Get all document checkboxes
+  const checkboxes = document.querySelectorAll('.document-checkbox');
+  const selectAllCard = document.getElementById('select-all');
+  const selectAllTable = document.getElementById('select-all-table');
+  
+  if (checkboxes.length === 0) return;
+  
+  // Count checked boxes
+  const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+  
+  // Determine state
+  let isChecked = false;
+  let isIndeterminate = false;
+  
+  if (checkedCount === 0) {
+    // None checked
+    isChecked = false;
+    isIndeterminate = false;
+  } else if (checkedCount === checkboxes.length) {
+    // All checked
+    isChecked = true;
+    isIndeterminate = false;
+  } else {
+    // Some checked
+    isChecked = false;
+    isIndeterminate = true;
+  }
+  
+  // Update both select-all checkboxes
+  if (selectAllCard) {
+    selectAllCard.checked = isChecked;
+    selectAllCard.indeterminate = isIndeterminate;
+  }
+  if (selectAllTable) {
+    selectAllTable.checked = isChecked;
+    selectAllTable.indeterminate = isIndeterminate;
+  }
+}
+
+
+function reprocessDocument(documentId) {
+  if (confirm('Are you sure you want to reprocess this document?')) {
+    // Create a form with proper CSRF token for individual reprocess action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `<%= ragdoll.documents_path %>/${documentId}/reprocess`;
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function bulkDelete() {
+  const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one document to delete.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete ${checkedBoxes.length} selected documents?`)) {
+    // Create a new form with proper CSRF token for delete action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<%= ragdoll.bulk_delete_documents_path %>';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add selected document IDs
+    checkedBoxes.forEach(checkbox => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'document_ids[]';
+      input.value = checkbox.value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function bulkReprocess() {
+  const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+  if (checkedBoxes.length === 0) {
+    alert('Please select at least one document to reprocess.');
+    return;
+  }
+
+  if (confirm(`Are you sure you want to reprocess ${checkedBoxes.length} selected documents?`)) {
+    // Create a new form with proper CSRF token for reprocess action
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '<%= ragdoll.bulk_reprocess_documents_path %>';
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+
+    // Add selected document IDs
+    checkedBoxes.forEach(checkbox => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'document_ids[]';
+      input.value = checkbox.value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function () {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl, {
+      delay: { "show": 500, "hide": 100 },
+      placement: 'top',
+      boundary: 'viewport',
+      fallbackPlacements: ['top', 'bottom']
+    });
+  });
+});
+</script>
+<% end %>

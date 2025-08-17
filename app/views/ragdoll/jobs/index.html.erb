@@ -1,0 +1,669 @@
+<% content_for :title, "Job Dashboard - Ragdoll Engine" %>
+
+<%= render Ragdoll::PageHeaderComponent.new(
+  title: "Job Dashboard",
+  icon: "fas fa-tasks", 
+  subtitle: "Monitor background job processing and queue status"
+) %>
+
+<div class="row mb-4">
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Pending",
+      value: @stats[:pending],
+      icon: "fas fa-clock",
+      color: "warning",
+      description: "Jobs waiting to process"
+    ) %>
+  </div>
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Completed",
+      value: @stats[:completed],
+      icon: "fas fa-check-circle",
+      color: "success",
+      description: "Successfully completed"
+    ) %>
+  </div>
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Failed",
+      value: @stats[:failed],
+      icon: "fas fa-exclamation-circle",
+      color: "danger",
+      description: "Jobs that failed"
+    ) %>
+  </div>
+  <div class="col-md-3">
+    <%= render Ragdoll::StatsCardComponent.new(
+      title: "Total",
+      value: @stats[:total],
+      icon: "fas fa-tasks",
+      color: "info",
+      description: "All jobs processed"
+    ) %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="pending-tab" data-bs-toggle="tab" href="#pending" role="tab">
+              <i class="fas fa-clock"></i> Pending Jobs (<%= @stats[:pending] %>)
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="completed-tab" data-bs-toggle="tab" href="#completed" role="tab">
+              <i class="fas fa-check-circle"></i> Completed Jobs (<%= @stats[:completed] %>)
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="failed-tab" data-bs-toggle="tab" href="#failed" role="tab">
+              <i class="fas fa-exclamation-circle"></i> Failed Jobs (<%= @stats[:failed] %>)
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body">
+        <div class="tab-content">
+          <!-- Pending Jobs Tab -->
+          <div class="tab-pane fade show active" id="pending" role="tabpanel">
+            <% if @pending_jobs.any? %>
+              <!-- Bulk Actions for Pending Jobs -->
+              <div class="mb-3 p-3 bg-light rounded">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <input type="checkbox" id="select-all-pending" class="form-check-input me-2">
+                    <label for="select-all-pending" class="form-check-label">Select All</label>
+                    <span id="pending-selected-count" class="ms-2 text-muted">(0 selected)</span>
+                  </div>
+                  <div>
+                    <button type="button" id="bulk-delete-pending" class="btn btn-danger btn-sm" disabled>
+                      <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th width="40px">
+                        <input type="checkbox" id="select-all-pending-header" class="form-check-input">
+                      </th>
+                      <th>Job Class</th>
+                      <th>Arguments</th>
+                      <th>Queue</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% @pending_jobs.each do |job| %>
+                      <tr>
+                        <td>
+                          <input type="checkbox" class="form-check-input job-checkbox-pending" value="<%= job.id %>">
+                        </td>
+                        <td>
+                          <strong><%= job.class_name %></strong>
+                        </td>
+                        <td>
+                          <small class="text-muted">
+                            <%= truncate(job.arguments.to_s, length: 100) %>
+                          </small>
+                        </td>
+                        <td>
+                          <span class="badge bg-primary"><%= job.queue_name %></span>
+                        </td>
+                        <td>
+                          <small><%= time_ago_in_words(job.created_at) %> ago</small>
+                        </td>
+                        <td>
+                          <%= link_to "Details", ragdoll.job_path(job), class: "btn btn-sm btn-outline-info" %>
+                          <%= form_with url: ragdoll.job_path(job), method: :delete, local: true,
+                                      data: { confirm: "Are you sure?" },
+                                      style: "display: inline;" do |form| %>
+                            <%= form.submit "Delete", class: "btn btn-sm btn-outline-danger" %>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            <% else %>
+              <div class="text-center py-4">
+                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No Pending Jobs</h5>
+                <p class="text-muted">All jobs have been processed!</p>
+              </div>
+            <% end %>
+          </div>
+          
+          <!-- Completed Jobs Tab -->
+          <div class="tab-pane fade" id="completed" role="tabpanel">
+            <% if @completed_jobs.any? %>
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Job Class</th>
+                      <th>Arguments</th>
+                      <th>Queue</th>
+                      <th>Completed</th>
+                      <th>Duration</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% @completed_jobs.each do |job| %>
+                      <tr>
+                        <td>
+                          <strong><%= job.class_name %></strong>
+                        </td>
+                        <td>
+                          <small class="text-muted">
+                            <%= truncate(job.arguments.to_s, length: 100) %>
+                          </small>
+                        </td>
+                        <td>
+                          <span class="badge bg-success"><%= job.queue_name %></span>
+                        </td>
+                        <td>
+                          <small><%= time_ago_in_words(job.finished_at) %> ago</small>
+                        </td>
+                        <td>
+                          <% if job.finished_at && job.created_at %>
+                            <small><%= number_with_precision((job.finished_at - job.created_at), precision: 2) %>s</small>
+                          <% else %>
+                            <small>-</small>
+                          <% end %>
+                        </td>
+                        <td>
+                          <%= link_to "Details", ragdoll.job_path(job), class: "btn btn-sm btn-outline-info" %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            <% else %>
+              <div class="text-center py-4">
+                <i class="fas fa-history text-muted" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No Completed Jobs</h5>
+                <p class="text-muted">No jobs have been completed yet.</p>
+              </div>
+            <% end %>
+          </div>
+          
+          <!-- Failed Jobs Tab -->
+          <div class="tab-pane fade" id="failed" role="tabpanel">
+            <% if @failed_jobs.any? %>
+              <!-- Bulk Actions for Failed Jobs -->
+              <div class="mb-3 p-3 bg-light rounded">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <input type="checkbox" id="select-all-failed" class="form-check-input me-2">
+                    <label for="select-all-failed" class="form-check-label">Select All</label>
+                    <span id="failed-selected-count" class="ms-2 text-muted">(0 selected)</span>
+                  </div>
+                  <div>
+                    <button type="button" id="bulk-retry-failed" class="btn btn-warning btn-sm me-2" disabled>
+                      <i class="fas fa-redo"></i> Retry Selected
+                    </button>
+                    <button type="button" id="bulk-delete-failed" class="btn btn-danger btn-sm" disabled>
+                      <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th width="40px">
+                        <input type="checkbox" id="select-all-failed-header" class="form-check-input">
+                      </th>
+                      <th>Job Class</th>
+                      <th>Error</th>
+                      <th>Failed At</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% @failed_jobs.each do |failed_job| %>
+                      <tr>
+                        <td>
+                          <input type="checkbox" class="form-check-input job-checkbox-failed" value="<%= failed_job.id %>">
+                        </td>
+                        <td>
+                          <strong><%= failed_job.job.class_name %></strong>
+                        </td>
+                        <td>
+                          <small class="text-danger">
+                            <%= truncate(failed_job.error.to_s, length: 150) %>
+                          </small>
+                        </td>
+                        <td>
+                          <small><%= time_ago_in_words(failed_job.created_at) %> ago</small>
+                        </td>
+                        <td>
+                          <%= link_to "Retry", ragdoll.retry_job_path(failed_job), method: :post,
+                                      class: "btn btn-sm btn-warning" %>
+                          <%= form_with url: ragdoll.job_path(failed_job, type: 'failed'), method: :delete, local: true,
+                                      data: { confirm: "Are you sure?" },
+                                      style: "display: inline;" do |form| %>
+                            <%= form.submit "Delete", class: "btn btn-sm btn-outline-danger" %>
+                          <% end %>
+                        </td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+            <% else %>
+              <div class="text-center py-4">
+                <i class="fas fa-shield-alt text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No Failed Jobs</h5>
+                <p class="text-muted">All jobs are running smoothly!</p>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Queue Information</h5>
+      </div>
+      <div class="card-body">
+        <p><strong>Queue Adapter:</strong> SolidQueue</p>
+        <p><strong>Default Queue:</strong> default</p>
+        <p><strong>Auto-refresh:</strong> This page auto-refreshes every 30 seconds</p>
+        <div class="mt-3">
+          <%= link_to "Refresh Now", ragdoll.jobs_path, class: "btn btn-primary" %>
+          <%= link_to "Back to Dashboard", ragdoll.dashboard_index_path, class: "btn btn-outline-secondary" %>
+          <% if @stats[:pending] > 0 %>
+            <%= form_with url: ragdoll.cancel_all_pending_jobs_path, method: :delete, local: true, 
+                        data: { confirm: "⚠️ WARNING: This will cancel ALL #{@stats[:pending]} pending jobs! This cannot be undone. Are you absolutely sure?" }, 
+                        style: "display: inline;" do |form| %>
+              <%= form.submit "⚡ Cancel All Pending", class: "btn btn-danger ms-2" %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-heartbeat"></i> Worker Health</h5>
+      </div>
+      <div class="card-body">
+        <div id="worker-health-status">
+          <div class="d-flex justify-content-center">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Checking...</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <%= link_to "Check Health", ragdoll.health_jobs_path, 
+                      class: "btn btn-info", 
+                      id: "check-health-btn" %>
+          <%= form_with url: ragdoll.restart_workers_jobs_path, method: :post, local: true, 
+                      data: { confirm: "Are you sure you want to restart the workers?" }, 
+                      style: "display: inline;" do |form| %>
+            <%= form.submit "Restart Workers", class: "btn btn-warning", id: "restart-workers-btn" %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%= content_for :javascript do %>
+<script>
+  // Worker health checking
+  function checkWorkerHealth() {
+    fetch('<%= ragdoll.health_jobs_path %>')
+      .then(response => response.json())
+      .then(data => {
+        updateHealthDisplay(data);
+      })
+      .catch(error => {
+        console.error('Health check failed:', error);
+        document.getElementById('worker-health-status').innerHTML = 
+          '<div class="alert alert-danger">Health check failed</div>';
+      });
+  }
+  
+  function updateHealthDisplay(health) {
+    const statusElement = document.getElementById('worker-health-status');
+    const restartBtn = document.getElementById('restart-workers-btn');
+    
+    let statusHtml = '';
+    let alertClass = '';
+    
+    switch(health.status) {
+      case 'healthy':
+        alertClass = 'alert-success';
+        statusHtml = `
+          <div class="alert ${alertClass}">
+            <i class="fas fa-check-circle"></i> <strong>Healthy</strong><br>
+            <small>${health.worker_count} workers running, ${health.stalled_jobs} pending jobs</small>
+          </div>
+        `;
+        restartBtn.disabled = false;
+        break;
+        
+      case 'stalled':
+        alertClass = 'alert-warning';
+        const oldestAge = Math.round(health.oldest_pending_job / 60);
+        statusHtml = `
+          <div class="alert ${alertClass}">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Stalled</strong><br>
+            <small>${health.stalled_jobs} jobs pending for ${oldestAge}+ minutes</small>
+          </div>
+        `;
+        restartBtn.disabled = false;
+        restartBtn.classList.add('btn-danger');
+        restartBtn.classList.remove('btn-warning');
+        break;
+        
+      case 'no_workers':
+        alertClass = 'alert-danger';
+        statusHtml = `
+          <div class="alert ${alertClass}">
+            <i class="fas fa-times-circle"></i> <strong>No Workers</strong><br>
+            <small>No worker processes detected</small>
+          </div>
+        `;
+        restartBtn.disabled = false;
+        restartBtn.classList.add('btn-danger');
+        restartBtn.classList.remove('btn-warning');
+        break;
+        
+      case 'processing':
+        alertClass = 'alert-info';
+        statusHtml = `
+          <div class="alert ${alertClass}">
+            <i class="fas fa-cog fa-spin"></i> <strong>Processing</strong><br>
+            <small>${health.worker_count} workers, ${health.stalled_jobs} jobs in queue</small>
+          </div>
+        `;
+        restartBtn.disabled = false;
+        break;
+    }
+    
+    statusElement.innerHTML = statusHtml;
+  }
+  
+  // Check health on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    checkWorkerHealth();
+    
+    // Check health every 15 seconds
+    setInterval(checkWorkerHealth, 15000);
+    
+    // Manual health check button
+    document.getElementById('check-health-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      checkWorkerHealth();
+    });
+  });
+  
+  // Auto-refresh page every 30 seconds (disabled when jobs are selected to prevent losing selection)
+  let autoRefreshTimeout;
+  function scheduleAutoRefresh() {
+    clearTimeout(autoRefreshTimeout);
+    autoRefreshTimeout = setTimeout(function() {
+      // Don't auto-refresh if jobs are selected
+      const pendingSelected = document.querySelectorAll('.job-checkbox-pending:checked').length;
+      const failedSelected = document.querySelectorAll('.job-checkbox-failed:checked').length;
+      
+      if (pendingSelected === 0 && failedSelected === 0) {
+        window.location.reload();
+      } else {
+        // Reschedule for later
+        scheduleAutoRefresh();
+      }
+    }, 30000);
+  }
+  scheduleAutoRefresh();
+
+  // Bulk operations for pending jobs
+  document.addEventListener('DOMContentLoaded', function() {
+    // Pending jobs bulk operations
+    const selectAllPending = document.getElementById('select-all-pending');
+    const selectAllPendingHeader = document.getElementById('select-all-pending-header');
+    const pendingCheckboxes = document.querySelectorAll('.job-checkbox-pending');
+    const bulkDeletePending = document.getElementById('bulk-delete-pending');
+    const pendingSelectedCount = document.getElementById('pending-selected-count');
+
+    // Sync "Select All" checkboxes for pending jobs
+    if (selectAllPending && selectAllPendingHeader) {
+      [selectAllPending, selectAllPendingHeader].forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const checked = this.checked;
+          pendingCheckboxes.forEach(cb => cb.checked = checked);
+          if (selectAllPending !== this) selectAllPending.checked = checked;
+          if (selectAllPendingHeader !== this) selectAllPendingHeader.checked = checked;
+          updatePendingBulkButtons();
+        });
+      });
+    }
+
+    // Individual checkbox handlers for pending jobs
+    pendingCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updatePendingBulkButtons);
+    });
+
+    function updatePendingBulkButtons() {
+      const checkedBoxes = document.querySelectorAll('.job-checkbox-pending:checked');
+      const count = checkedBoxes.length;
+      
+      if (pendingSelectedCount) {
+        pendingSelectedCount.textContent = `(${count} selected)`;
+      }
+      
+      if (bulkDeletePending) {
+        bulkDeletePending.disabled = count === 0;
+      }
+
+      // Update "Select All" checkboxes
+      const allChecked = count === pendingCheckboxes.length && count > 0;
+      if (selectAllPending) selectAllPending.checked = allChecked;
+      if (selectAllPendingHeader) selectAllPendingHeader.checked = allChecked;
+    }
+
+    // Bulk delete pending jobs
+    if (bulkDeletePending) {
+      bulkDeletePending.addEventListener('click', function() {
+        const selectedIds = Array.from(document.querySelectorAll('.job-checkbox-pending:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} pending job(s)? This cannot be undone.`)) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '<%= ragdoll.bulk_delete_jobs_path %>';
+          
+          // Add CSRF token
+          const csrfToken = document.querySelector('meta[name="csrf-token"]');
+          if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'authenticity_token';
+            csrfInput.value = csrfToken.content;
+            form.appendChild(csrfInput);
+          }
+          
+          // Add job type
+          const typeInput = document.createElement('input');
+          typeInput.type = 'hidden';
+          typeInput.name = 'job_type';
+          typeInput.value = 'pending';
+          form.appendChild(typeInput);
+          
+          // Add selected job IDs
+          selectedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'job_ids[]';
+            input.value = id;
+            form.appendChild(input);
+          });
+          
+          document.body.appendChild(form);
+          form.submit();
+        }
+      });
+    }
+
+    // Failed jobs bulk operations
+    const selectAllFailed = document.getElementById('select-all-failed');
+    const selectAllFailedHeader = document.getElementById('select-all-failed-header');
+    const failedCheckboxes = document.querySelectorAll('.job-checkbox-failed');
+    const bulkRetryFailed = document.getElementById('bulk-retry-failed');
+    const bulkDeleteFailed = document.getElementById('bulk-delete-failed');
+    const failedSelectedCount = document.getElementById('failed-selected-count');
+
+    // Sync "Select All" checkboxes for failed jobs
+    if (selectAllFailed && selectAllFailedHeader) {
+      [selectAllFailed, selectAllFailedHeader].forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const checked = this.checked;
+          failedCheckboxes.forEach(cb => cb.checked = checked);
+          if (selectAllFailed !== this) selectAllFailed.checked = checked;
+          if (selectAllFailedHeader !== this) selectAllFailedHeader.checked = checked;
+          updateFailedBulkButtons();
+        });
+      });
+    }
+
+    // Individual checkbox handlers for failed jobs
+    failedCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateFailedBulkButtons);
+    });
+
+    function updateFailedBulkButtons() {
+      const checkedBoxes = document.querySelectorAll('.job-checkbox-failed:checked');
+      const count = checkedBoxes.length;
+      
+      if (failedSelectedCount) {
+        failedSelectedCount.textContent = `(${count} selected)`;
+      }
+      
+      if (bulkRetryFailed) {
+        bulkRetryFailed.disabled = count === 0;
+      }
+      
+      if (bulkDeleteFailed) {
+        bulkDeleteFailed.disabled = count === 0;
+      }
+
+      // Update "Select All" checkboxes
+      const allChecked = count === failedCheckboxes.length && count > 0;
+      if (selectAllFailed) selectAllFailed.checked = allChecked;
+      if (selectAllFailedHeader) selectAllFailedHeader.checked = allChecked;
+    }
+
+    // Bulk retry failed jobs
+    if (bulkRetryFailed) {
+      bulkRetryFailed.addEventListener('click', function() {
+        const selectedIds = Array.from(document.querySelectorAll('.job-checkbox-failed:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Are you sure you want to retry ${selectedIds.length} failed job(s)?`)) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '<%= ragdoll.bulk_retry_jobs_path %>';
+          
+          // Add CSRF token
+          const csrfToken = document.querySelector('meta[name="csrf-token"]');
+          if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'authenticity_token';
+            csrfInput.value = csrfToken.content;
+            form.appendChild(csrfInput);
+          }
+          
+          // Add selected job IDs
+          selectedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'job_ids[]';
+            input.value = id;
+            form.appendChild(input);
+          });
+          
+          document.body.appendChild(form);
+          form.submit();
+        }
+      });
+    }
+
+    // Bulk delete failed jobs
+    if (bulkDeleteFailed) {
+      bulkDeleteFailed.addEventListener('click', function() {
+        const selectedIds = Array.from(document.querySelectorAll('.job-checkbox-failed:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) return;
+        
+        if (confirm(`Are you sure you want to delete ${selectedIds.length} failed job(s)? This cannot be undone.`)) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '<%= ragdoll.bulk_delete_jobs_path %>';
+          
+          // Add CSRF token
+          const csrfToken = document.querySelector('meta[name="csrf-token"]');
+          if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'authenticity_token';
+            csrfInput.value = csrfToken.content;
+            form.appendChild(csrfInput);
+          }
+          
+          // Add job type
+          const typeInput = document.createElement('input');
+          typeInput.type = 'hidden';
+          typeInput.name = 'job_type';
+          typeInput.value = 'failed';
+          form.appendChild(typeInput);
+          
+          // Add selected job IDs
+          selectedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'job_ids[]';
+            input.value = id;
+            form.appendChild(input);
+          });
+          
+          document.body.appendChild(form);
+          form.submit();
+        }
+      });
+    }
+
+    // Initialize button states
+    updatePendingBulkButtons();
+    updateFailedBulkButtons();
+  });
+</script>
+<% end %>

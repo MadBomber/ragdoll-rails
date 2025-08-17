@@ -1,0 +1,91 @@
+<% content_for(:title, "Edit Document: #{@document.title}") %>
+
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-md-8 mx-auto">
+      <div class="card">
+        <div class="card-header">
+          <h4 class="card-title mb-0">
+            <i class="fas fa-edit"></i> Edit Document
+          </h4>
+        </div>
+        <div class="card-body">
+          <%= form_with model: @document, url: ragdoll.document_path(@document), local: true do |form| %>
+            <% if @document.errors.any? %>
+              <div class="alert alert-danger" role="alert">
+                <h6 class="alert-heading">Please fix the following errors:</h6>
+                <ul class="mb-0">
+                  <% @document.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            <% end %>
+
+            <div class="mb-3">
+              <%= form.label :title, class: "form-label" %>
+              <%= form.text_field :title, class: "form-control", placeholder: "Enter document title" %>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :summary, class: "form-label" %>
+              <%= form.text_area :summary, class: "form-control", rows: 3, placeholder: "Enter document summary (optional)" %>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :keywords, class: "form-label" %>
+              <%= form.text_field :keywords, class: "form-control", placeholder: "Enter keywords separated by commas" %>
+              <small class="form-text text-muted">Separate keywords with commas</small>
+            </div>
+
+            <div class="mb-3">
+              <%= form.label :status, class: "form-label" %>
+              <%= form.select :status, options_for_select([
+                ['Pending', 'pending'],
+                ['Processing', 'processing'],
+                ['Processed', 'processed'],
+                ['Failed', 'failed']
+              ], @document.status), {}, class: "form-select" %>
+            </div>
+
+            <% if @document.location.present? %>
+            <div class="mb-3">
+              <label class="form-label">File Location</label>
+              <div class="input-group">
+                <input type="text" class="form-control" value="<%= @document.location %>" readonly>
+                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+              </div>
+              <small class="form-text text-muted">File location cannot be changed</small>
+            </div>
+            <% end %>
+
+            <% if @document.metadata.present? %>
+            <div class="mb-3">
+              <label class="form-label">Metadata</label>
+              <div class="card bg-light">
+                <div class="card-body">
+                  <% @document.metadata.each do |key, value| %>
+                    <div class="row mb-2">
+                      <div class="col-sm-4">
+                        <small class="text-muted"><%= key.humanize %>:</small>
+                      </div>
+                      <div class="col-sm-8">
+                        <small><%= value %></small>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+            <% end %>
+
+            <div class="d-flex justify-content-between">
+              <%= link_to "Cancel", ragdoll.document_path(@document), class: "btn btn-secondary" %>
+              <%= form.submit "Update Document", class: "btn btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

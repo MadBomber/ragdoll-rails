@@ -1,0 +1,248 @@
+<% content_for(:title, "Upload Results") %>
+
+<%= render Ragdoll::PageHeaderComponent.new(
+  title: "Upload Results",
+  subtitle: "Review the results of your document upload",
+  icon: "fas fa-check-circle"
+) %>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-list-alt"></i> Upload Summary
+        </h5>
+        <div>
+          <% successful_count = @results&.count { |r| r[:success] } || 0 %>
+          <% failed_count = (@results&.length || 0) - successful_count %>
+          <% duplicate_count = @results&.count { |r| r[:success] && r[:duplicate] } || 0 %>
+          <% new_count = successful_count - duplicate_count %>
+          
+          <span class="badge bg-success me-1"><%= new_count %> new</span>
+          <% if duplicate_count > 0 %>
+            <span class="badge bg-warning me-1"><%= duplicate_count %> duplicate<%= duplicate_count > 1 ? 's' : '' %></span>
+          <% end %>
+          <% if failed_count > 0 %>
+            <span class="badge bg-danger"><%= failed_count %> failed</span>
+          <% end %>
+        </div>
+      </div>
+      <div class="card-body">
+        <% if @results&.any? %>
+          <% @results.each_with_index do |result, index| %>
+            <div class="result-item border-bottom py-3 <%= 'border-bottom-0' if index == @results.count - 1 %>">
+              <div class="d-flex align-items-start">
+                <div class="result-icon me-3 mt-1">
+                  <% if result[:success] %>
+                    <% if result[:duplicate] && !result[:forced] %>
+                      <i class="fas fa-copy fa-lg text-warning" title="Duplicate detected"></i>
+                    <% elsif result[:duplicate] && result[:forced] %>
+                      <i class="fas fa-check-circle fa-lg text-success" title="Duplicate forced"></i>
+                    <% else %>
+                      <i class="fas fa-check-circle fa-lg text-success" title="Successfully added"></i>
+                    <% end %>
+                  <% else %>
+                    <i class="fas fa-times-circle fa-lg text-danger" title="Failed"></i>
+                  <% end %>
+                </div>
+                
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">
+                      <i class="fas fa-file me-1"></i>
+                      <%= result[:file] %>
+                    </h6>
+                    <% if result[:success] %>
+                      <% if result[:duplicate] && !result[:forced] %>
+                        <span class="badge bg-warning">
+                          <i class="fas fa-copy me-1"></i>Duplicate Detected
+                        </span>
+                      <% elsif result[:duplicate] && result[:forced] %>
+                        <span class="badge bg-success">
+                          <i class="fas fa-exclamation-triangle me-1"></i>Duplicate Forced
+                        </span>
+                      <% else %>
+                        <%= render Ragdoll::StatusBadgeComponent.new(status: "success") %>
+                      <% end %>
+                    <% else %>
+                      <%= render Ragdoll::StatusBadgeComponent.new(status: "failed") %>
+                    <% end %>
+                  </div>
+                  
+                  <% if result[:success] %>
+                    <% if result[:document] %>
+                      <p class="text-muted mb-2">
+                        <% if result[:duplicate] && !result[:forced] %>
+                          <strong>Duplicate detected:</strong> This document already exists in the system. The existing document was returned instead of creating a duplicate.
+                        <% elsif result[:duplicate] && result[:forced] %>
+                          <strong>Duplicate forced:</strong> A new document was created despite an existing duplicate in the system.
+                        <% else %>
+                          Document successfully added to the system.
+                        <% end %>
+                        <% if result[:message] %>
+                          <br><em><%= result[:message] %></em>
+                        <% end %>
+                      </p>
+                      <div class="small text-muted">
+                        <i class="fas fa-id-badge me-1"></i> 
+                        Document ID: <%= result[:document].id %>
+                        <span class="mx-2">•</span>
+                        <i class="fas fa-clock me-1"></i>
+                        Added <%= time_ago_in_words(result[:document].created_at) %> ago
+                      </div>
+                      <div class="mt-2">
+                        <%= link_to ragdoll.document_path(result[:document]), 
+                            class: "btn btn-sm btn-outline-primary" do %>
+                          <i class="fas fa-eye me-1"></i> View Document
+                        <% end %>
+                      </div>
+                    <% else %>
+                      <p class="text-success mb-0">
+                        File processed successfully.
+                        <% if result[:message] %>
+                          <%= result[:message] %>
+                        <% end %>
+                      </p>
+                    <% end %>
+                  <% else %>
+                    <div class="alert alert-danger mb-0">
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                      <strong>Error:</strong> <%= result[:error] %>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <%= render Ragdoll::EmptyStateComponent.new(
+            title: "No results",
+            message: "No upload results to display.",
+            icon: "fas fa-upload"
+          ) %>
+        <% end %>
+      </div>
+      
+      <% if @results&.any? %>
+        <div class="card-footer bg-light">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="small text-muted">
+              Upload completed at <%= Time.current.strftime("%B %d, %Y at %I:%M %p") %>
+            </div>
+            <div class="btn-group" role="group">
+              <%= link_to ragdoll.new_document_path, class: "btn btn-outline-primary btn-sm" do %>
+                <i class="fas fa-plus me-1"></i> Upload More
+              <% end %>
+              <%= link_to ragdoll.documents_path, class: "btn btn-primary btn-sm" do %>
+                <i class="fas fa-list me-1"></i> View All Documents
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <!-- Next Steps -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h6 class="card-title mb-0">
+          <i class="fas fa-arrow-right"></i> Next Steps
+        </h6>
+      </div>
+      <div class="card-body">
+        <% if @results&.any? { |r| r[:success] } %>
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+              <i class="fas fa-check text-success me-2"></i>
+              Documents are being processed in the background
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-robot text-info me-2"></i>
+              AI embeddings will be generated automatically
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-search text-primary me-2"></i>
+              Documents will be available for search once processed
+            </li>
+            <li>
+              <i class="fas fa-chart-bar text-warning me-2"></i>
+              Monitor processing status in the dashboard
+            </li>
+          </ul>
+        <% else %>
+          <p class="text-muted mb-3">
+            All uploads failed. Please check the error messages and try again.
+          </p>
+          <%= link_to ragdoll.new_document_path, class: "btn btn-primary btn-sm w-100" do %>
+            <i class="fas fa-retry me-1"></i> Try Again
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Processing Status -->
+    <% if @results&.any? { |r| r[:success] } %>
+      <div class="card">
+        <div class="card-header">
+          <h6 class="card-title mb-0">
+            <i class="fas fa-cogs"></i> Processing Status
+          </h6>
+        </div>
+        <div class="card-body">
+          <p class="small text-muted mb-3">
+            Your documents are being processed. You can monitor the progress in real-time.
+          </p>
+          
+          <div class="d-grid gap-2">
+            <%= link_to ragdoll.jobs_path, class: "btn btn-outline-info btn-sm" do %>
+              <i class="fas fa-tasks me-1"></i> View Job Queue
+            <% end %>
+            
+            <%= link_to ragdoll.dashboard_index_path, class: "btn btn-outline-secondary btn-sm" do %>
+              <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+// Auto-refresh successful documents to check processing status
+<% if @results&.any? { |r| r[:success] && r[:document] } %>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Refresh every 30 seconds to check processing status
+    setInterval(function() {
+      if (document.visibilityState === 'visible') {
+        // Only refresh if page is visible
+        const statusElements = document.querySelectorAll('[data-document-id]');
+        statusElements.forEach(function(element) {
+          // Could add AJAX calls here to update document status
+        });
+      }
+    }, 30000);
+  });
+<% end %>
+</script>
+
+<style>
+.result-item {
+  transition: background-color 0.2s ease;
+}
+
+.result-item:hover {
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+  margin: -0.5rem;
+  padding: 1rem !important;
+}
+
+.result-icon {
+  min-width: 24px;
+}
+</style>

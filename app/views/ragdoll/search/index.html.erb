@@ -1,0 +1,324 @@
+<% content_for :title, "Search - Ragdoll Engine" %>
+
+<div class="row">
+  <div class="col-12">
+    <h1><i class="fas fa-search"></i> Search Documents</h1>
+    <p class="text-muted">Use semantic search to find relevant content across all your documents</p>
+    
+    <% if @reconstructed_search %>
+      <div class="alert alert-info">
+        <i class="fas fa-history me-2"></i>
+        <strong>Previous Search Loaded:</strong> All search parameters have been restored from your search history.
+        <small class="d-block mt-1">
+          Original search from <%= time_ago_in_words(@reconstructed_search.created_at) %> ago
+          • <%= @reconstructed_search.search_type.titleize %> search
+          • <%= @reconstructed_search.results_count %> results found
+        </small>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-search"></i> Search Query</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: ragdoll.search_path, method: :post, local: true, class: "search-form", data: { turbo: false } do |form| %>
+          <div class="input-group mb-3">
+            <%= form.text_field :query, placeholder: "Enter your search query...", value: @query, class: "form-control form-control-lg", required: true %>
+            <div class="input-group-append">
+              <%= form.submit "Search", class: "btn btn-primary btn-lg" %>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Document Type</label>
+                <%= form.select :document_type, 
+                    options_for_select([["All Types", ""]] + ::Ragdoll::Document.distinct.pluck(:document_type).compact.map { |type| [type.titleize, type] }, @filters[:document_type]), 
+                    {}, 
+                    { class: "form-select" } %>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                <%= form.select :status, 
+                    options_for_select([["All Statuses", ""], ["Processed", "processed"], ["Failed", "failed"], ["Pending", "pending"]], @filters[:status]), 
+                    {}, 
+                    { class: "form-select" } %>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Search Types</label>
+                <div class="form-check">
+                  <%= form.check_box :use_similarity_search, { checked: @use_similarity_search != 'false', class: "form-check-input" }, "true", "false" %>
+                  <%= form.label :use_similarity_search, "Similarity Search", class: "form-check-label" %>
+                  <small class="form-text text-muted d-block">AI-powered semantic search</small>
+                </div>
+                <div class="form-check mt-2">
+                  <%= form.check_box :use_fulltext_search, { checked: @use_fulltext_search != 'false', class: "form-check-input" }, "true", "false" %>
+                  <%= form.label :use_fulltext_search, "Full Text Search", class: "form-check-label" %>
+                  <small class="form-text text-muted d-block">Traditional keyword matching</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Max Results</label>
+                <%= form.number_field :limit, value: @filters[:limit], min: 1, max: 50, class: "form-control" %>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Similarity Threshold</label>
+                <%= form.number_field :threshold, value: @filters[:threshold], min: 0.001, max: 1.0, step: 0.001, class: "form-control" %>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="mb-3">
+                <label class="form-label">Additional Options</label>
+                <div class="form-check">
+                  <%= form.check_box :use_usage_ranking, { checked: params[:use_usage_ranking] == 'true', class: "form-check-input" }, "true", "false" %>
+                  <%= form.label :use_usage_ranking, "Use Usage Ranking", class: "form-check-label" %>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    
+    <% if @search_performed %>
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5><i class="fas fa-list"></i> Search Results</h5>
+          <% if @detailed_results %>
+            <span class="badge bg-primary"><%= @detailed_results.count %> results</span>
+          <% end %>
+        </div>
+        <div class="card-body">
+          <% if @error %>
+            <div class="alert alert-danger">
+              <i class="fas fa-exclamation-circle"></i> Error: <%= @error %>
+            </div>
+          <% elsif @detailed_results && @detailed_results.any? %>
+            <% @detailed_results.each_with_index do |result, index| %>
+              <div class="card mb-3">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <h6 class="card-title">
+                        <%= link_to result[:document].title, ragdoll.document_path(result[:document]), class: "text-decoration-none" %>
+                        <span class="badge bg-secondary ms-2"><%= result[:document].document_type&.upcase %></span>
+                        <% if result[:search_type] == 'similarity' %>
+                          <span class="badge bg-info ms-1" title="Found via AI-powered similarity search">
+                            <i class="fas fa-brain"></i> Similarity
+                          </span>
+                        <% elsif result[:search_type] == 'fulltext' %>
+                          <span class="badge bg-success ms-1" title="Found via full-text keyword search">
+                            <i class="fas fa-font"></i> Full Text
+                          </span>
+                        <% end %>
+                      </h6>
+                      <p class="card-text"><%= result[:content] %></p>
+                      <div class="d-flex align-items-center">
+                        <small class="text-muted">
+                          <% if result[:embedding] %>
+                            Chunk <%= result[:embedding].chunk_index %>
+                          <% else %>
+                            Document summary
+                          <% end %>
+                        </small>
+                        <% if result[:usage_count] && result[:usage_count] > 0 %>
+                          <span class="badge bg-success ms-2"><%= result[:usage_count] %> uses</span>
+                        <% end %>
+                        <% if result[:last_used] %>
+                          <small class="text-muted ms-2">
+                            Last used: <%= time_ago_in_words(result[:last_used]) %> ago
+                          </small>
+                        <% end %>
+                      </div>
+                    </div>
+                    <div class="text-end">
+                      <% if result[:similarity] %>
+                        <div class="similarity-score">
+                          <span class="badge bg-info">
+                            <%= number_with_precision(result[:similarity], precision: 3) %>
+                          </span>
+                          <br>
+                          <small class="text-muted">similarity</small>
+                        </div>
+                      <% else %>
+                        <div class="text-muted">
+                          <i class="fas fa-font"></i><br>
+                          <small>Keyword Match</small>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="text-center py-4">
+              <i class="fas fa-search fa-3x text-muted mb-3"></i>
+              <h5>No results found</h5>
+              <p class="text-muted">Try adjusting your search query or filters.</p>
+              
+              <% if @below_threshold_stats && @below_threshold_stats[:highest] %>
+                <div class="alert alert-warning mt-3">
+                  <h6><i class="fas fa-exclamation-triangle"></i> 
+                    <% if @below_threshold_stats[:count] && @below_threshold_stats[:count] > 0 %>
+                      Results exist below your threshold!
+                    <% else %>
+                      All results are below your threshold!
+                    <% end %>
+                  </h6>
+                  <p class="mb-3">
+                    <% if @below_threshold_stats[:count] && @below_threshold_stats[:count] > 0 %>
+                      Found <strong><%= @below_threshold_stats[:count] %></strong> potential matches below your threshold of 
+                    <% else %>
+                      All matches found are below your threshold of 
+                    <% end %>
+                    <strong><%= number_with_precision(@similarity_threshold_used, precision: 3) %></strong>
+                    <% search_type = params[:use_similarity_search] != 'false' && params[:use_fulltext_search] != 'false' ? 'hybrid' : 
+                                     params[:use_similarity_search] != 'false' ? 'semantic' : 'fulltext' %>
+                    <small class="text-muted d-block">(<%= search_type %> search)</small>
+                  </p>
+                  
+                  <div class="row text-center mb-3">
+                    <div class="col-md-4">
+                      <strong>Highest Match</strong><br>
+                      <span class="badge bg-success fs-6"><%= number_with_precision(@below_threshold_stats[:highest], precision: 3) %></span>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Average Match</strong><br>
+                      <span class="badge bg-info fs-6"><%= number_with_precision(@below_threshold_stats[:average], precision: 3) %></span>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Lowest Match</strong><br>
+                      <span class="badge bg-secondary fs-6"><%= number_with_precision(@below_threshold_stats[:lowest], precision: 3) %></span>
+                    </div>
+                  </div>
+                  
+                  <% if @below_threshold_stats[:suggested_threshold] && @below_threshold_stats[:suggested_threshold] > 0 %>
+                  <div class="d-grid gap-2">
+                    <%= form_with url: ragdoll.search_path, method: :post, local: true, data: { turbo: false } do |form| %>
+                      <%= form.hidden_field :query, value: @query %>
+                      <%= form.hidden_field :threshold, value: @below_threshold_stats[:suggested_threshold] %>
+                      <%= form.hidden_field :document_type, value: @filters[:document_type] %>
+                      <%= form.hidden_field :status, value: @filters[:status] %>
+                      <%= form.hidden_field :limit, value: @filters[:limit] %>
+                      <%= form.hidden_field :use_similarity_search, value: params[:use_similarity_search] %>
+                      <%= form.hidden_field :use_fulltext_search, value: params[:use_fulltext_search] %>
+                      <%= form.button type: :submit, class: "btn btn-warning w-100" do %>
+                        <i class="fas fa-redo"></i> 
+                        Search again with threshold: <%= number_with_precision(@below_threshold_stats[:suggested_threshold], precision: 3) %>
+                      <% end %>
+                    <% end %>
+                  </div>
+                  <% end %>
+                </div>
+              <% elsif @similarity_search_attempted && @similarity_stats && @similarity_stats[:total_similarities_calculated] && @similarity_stats[:total_similarities_calculated] > 0 %>
+                <div class="alert alert-info mt-3">
+                  <h6><i class="fas fa-chart-line"></i> Similarity Search Statistics</h6>
+                  <p class="mb-2">No results exceeded the similarity threshold of <strong><%= number_with_precision(@similarity_threshold_used, precision: 3) %></strong></p>
+                  <div class="row text-center">
+                    <div class="col-md-4">
+                      <strong>Highest Similarity</strong><br>
+                      <span class="badge bg-success"><%= number_with_precision(@similarity_stats[:highest_similarity] || 0, precision: 3) %></span>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Average Similarity</strong><br>
+                      <span class="badge bg-info"><%= number_with_precision(@similarity_stats[:average_similarity] || 0, precision: 3) %></span>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Lowest Similarity</strong><br>
+                      <span class="badge bg-secondary"><%= number_with_precision(@similarity_stats[:lowest_similarity] || 0, precision: 3) %></span>
+                    </div>
+                  </div>
+                  <small class="text-muted d-block mt-2">
+                    Checked <%= @similarity_stats[:total_similarities_calculated] %> embeddings
+                    <% if @similarity_stats[:similarities_above_threshold] && @similarity_stats[:similarities_above_threshold] > 0 %>
+                      • <%= @similarity_stats[:similarities_above_threshold] %> were above threshold but filtered by other criteria
+                    <% end %>
+                  </small>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Search Tips</h5>
+      </div>
+      <div class="card-body">
+        <h6>How to Search:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-lightbulb text-warning"></i> Use natural language queries</li>
+          <li><i class="fas fa-quote-left text-info"></i> Ask questions or describe concepts</li>
+          <li><i class="fas fa-filter text-success"></i> Use filters to narrow results</li>
+          <li><i class="fas fa-sliders-h text-primary"></i> Adjust similarity threshold</li>
+        </ul>
+        
+        <hr>
+        
+        <h6>Search Features:</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-brain text-primary"></i> Semantic understanding</li>
+          <li><i class="fas fa-chart-line text-success"></i> Usage-based ranking</li>
+          <li><i class="fas fa-bullseye text-info"></i> Similarity scoring</li>
+          <li><i class="fas fa-clock text-warning"></i> Recency weighting</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="card mt-4">
+      <div class="card-header">
+        <h5><i class="fas fa-star"></i> Popular Queries</h5>
+      </div>
+      <div class="card-body">
+        <% if @popular_queries&.any? %>
+          <% @popular_queries.each do |query, count| %>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <%= form_with url: ragdoll.search_path, method: :post, local: true, class: "d-inline", data: { turbo: false } do |form| %>
+                <%= form.hidden_field :query, value: query %>
+                <%= form.hidden_field :threshold, value: (::Rails.env.development? ? 0.001 : 0.7) %>
+                <%= form.hidden_field :document_type, value: '' %>
+                <%= form.hidden_field :status, value: '' %>
+                <%= form.hidden_field :limit, value: 10 %>
+                <%= form.hidden_field :use_similarity_search, value: 'true' %>
+                <%= form.hidden_field :use_fulltext_search, value: 'true' %>
+                <%= form.button type: :submit, class: "btn btn-link p-0 text-decoration-none border-0 text-start", style: "font: inherit;" do %>
+                  <%= query %>
+                <% end %>
+              <% end %>
+              <span class="badge bg-secondary"><%= count %></span>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="text-muted">No popular queries yet.</p>
+        <% end %>
+      </div>
+    </div>
+    
+  </div>
+</div>
