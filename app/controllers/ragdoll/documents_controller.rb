@@ -181,62 +181,76 @@ module Ragdoll
             return
           end
           
-          successful_count = 0
-          failed_files = []
+          # Generate session ID for tracking progress
+          session_id = session.id || SecureRandom.uuid
+          Rails.logger.info "🚀 Starting async bulk upload for session: #{session_id}"
           
-          # Process files in batches to avoid "too many open files" error
-          batch_size = 50  # Process 50 files at a time
-          files.each_slice(batch_size) do |file_batch|
-            file_batch.each do |file|
-              begin
-                # Create a temporary file to save the uploaded content
-                temp_file = Tempfile.new([File.basename(file.original_filename, ".*"), File.extname(file.original_filename)])
-                
-                # Handle encoding issues by reading as binary first
-                content = file.read
-                if content.encoding == Encoding::ASCII_8BIT
-                  # Try to force UTF-8 encoding, replacing invalid characters
-                  content = content.force_encoding('UTF-8')
-                  unless content.valid_encoding?
-                    content = content.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
-                  end
+          # Prepare file data for background processing
+          file_paths_data = []
+          
+          files.each_with_index do |file, index|
+            begin
+              # Create a unique temporary file that will persist for background job
+              temp_filename = "#{session_id}_#{index}_#{Time.current.to_i}_#{file.original_filename}"
+              temp_path = Rails.root.join('tmp', 'bulk_uploads', temp_filename)
+              FileUtils.mkdir_p(File.dirname(temp_path))
+              
+              # Handle encoding issues by reading as binary first
+              content = file.read
+              if content.encoding == Encoding::ASCII_8BIT
+                # Try to force UTF-8 encoding, replacing invalid characters
+                content = content.force_encoding('UTF-8')
+                unless content.valid_encoding?
+                  content = content.encode('UTF-8', invalid: :replace, undef: :replace, replace: '?')
                 end
-                
-                temp_file.write(content)
-                temp_file.close
-                
-                # Add document using ragdoll with force option if provided
-                force_duplicate = params[:force_duplicate] == '1'
-                result = ::Ragdoll.add_document(path: temp_file.path, force: force_duplicate)
-                
-                if result
-                  successful_count += 1
-                else
-                  failed_files << file.original_filename
-                end
-                
-              rescue => e
-                Rails.logger.error "Failed to process file #{file.original_filename}: #{e.message}"
-                failed_files << file.original_filename
-              ensure
-                # Clean up temp file
-                temp_file&.unlink if temp_file&.path
               end
+              
+              # Write content to persistent temp file
+              File.write(temp_path, content)
+              
+              file_paths_data << {
+                temp_path: temp_path.to_s,
+                original_filename: file.original_filename
+              }
+              
+              Rails.logger.info "📁 Prepared file #{index + 1}/#{files.size}: #{file.original_filename}"
+              
+            rescue => e
+              Rails.logger.error "❌ Failed to prepare file #{file.original_filename}: #{e.message}"
+              # Continue with other files
             end
-            
-            # Force garbage collection after each batch to free file descriptors
-            GC.start
           end
           
-          if failed_files.any?
-            flash[:alert] = "Processed #{successful_count}/#{files.count} files. Failed: #{failed_files.join(', ')}"
-          else
-            flash[:notice] = "Successfully processed #{successful_count} files from directory."
+          if file_paths_data.empty?
+            flash[:alert] = "No files could be prepared for processing."
+            redirect_to ragdoll.documents_path
+            return
+          end
+          
+          # Queue the background job
+          force_duplicate = params[:force_duplicate] == '1'
+          begin
+            BulkDocumentProcessingJob.perform_later(session_id, file_paths_data, force_duplicate)
+            
+            flash[:notice] = "Upload started! Processing #{file_paths_data.size} files in the background. You can monitor progress on this page."
+            Rails.logger.info "✅ Queued background job for #{file_paths_data.size} files"
+            
+          rescue => e
+            Rails.logger.error "💥 Failed to queue background job: #{e.message}"
+            flash[:alert] = "Failed to start background processing: #{e.message}"
           end
           
         rescue => e
-          Rails.logger.error "Bulk upload error: #{e.message}"
-          flash[:alert] = "Error processing directory: #{e.message}"
+          RagdollLogging.log_error("bulk_upload_preparation", e, {
+            session_id: session_id,
+            files_count: files&.size || 0,
+            force_duplicate: force_duplicate,
+            prepared_files_count: file_paths_data&.size || 0
+          })
+          
+          Rails.logger.error "💥 Bulk upload preparation error: #{e.message}"
+          Rails.logger.error e.backtrace.join("\n")
+          flash[:alert] = "Error preparing files for processing: #{e.message}"
         end
       else
         flash[:alert] = "No files selected for upload."
