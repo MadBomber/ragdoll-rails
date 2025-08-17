@@ -232,13 +232,14 @@ module Ragdoll
           # Queue the background job
           force_duplicate = params[:force_duplicate] == '1'
           begin
-            BulkDocumentProcessingJob.perform_later(session_id, file_paths_data, force_duplicate)
+            Ragdoll::BulkDocumentProcessingJob.perform_later(session_id, file_paths_data, force_duplicate)
             
             flash[:notice] = "Upload started! Processing #{file_paths_data.size} files in the background. You can monitor progress on this page."
             Rails.logger.info "✅ Queued background job for #{file_paths_data.size} files"
             
           rescue => e
             Rails.logger.error "💥 Failed to queue background job: #{e.message}"
+            Rails.logger.error e.backtrace.join("\n")
             flash[:alert] = "Failed to start background processing: #{e.message}"
           end
           
