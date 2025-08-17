@@ -2,7 +2,7 @@
 
 module Ragdoll
   class BulkDocumentProcessingJob < ApplicationJob
-    queue_as :ragdoll
+    queue_as :default
     
     private
     
