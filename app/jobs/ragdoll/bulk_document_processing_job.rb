@@ -10,43 +10,51 @@ module Ragdoll
       return unless defined?(RagdollLogging)
       RagdollLogging.log_operation(operation, details)
     rescue => e
-      Rails.logger.debug "Failed to log operation #{operation}: #{e.message}"
+      logger.debug "Failed to log operation #{operation}: #{e.message}"
     end
     
     def safe_log_error(operation, error, details = {})
       return unless defined?(RagdollLogging)
       RagdollLogging.log_error(operation, error, details)
     rescue => e
-      Rails.logger.debug "Failed to log error #{operation}: #{e.message}"
+      logger.debug "Failed to log error #{operation}: #{e.message}"
     end
     
     def safe_log_performance(operation, duration, details = {})
       return unless defined?(RagdollLogging)
       RagdollLogging.log_performance(operation, duration, details)
     rescue => e
-      Rails.logger.debug "Failed to log performance #{operation}: #{e.message}"
+      logger.debug "Failed to log performance #{operation}: #{e.message}"
     end
     
     def perform(session_id, file_paths_data, force_duplicate = false)
       start_time = Time.current
       
+      # Initialize variables early to avoid nil errors in rescue block
+      total_files = file_paths_data&.size || 0
+      processed_count = 0
+      failed_files = []
+      
       safe_log_operation("bulk_processing_start", {
         session_id: session_id,
-        file_count: file_paths_data.size,
+        file_count: total_files,
         force_duplicate: force_duplicate,
         job_id: job_id
       })
       
-      Rails.logger.info "🚀 Starting bulk document processing job for session #{session_id}"
-      Rails.logger.info "📁 Processing #{file_paths_data.size} files"
+      logger.info "🚀 Starting bulk document processing job for session #{session_id}"
+      logger.info "📁 Processing #{total_files} files"
       
-      total_files = file_paths_data.size
-      processed_count = 0
-      failed_files = []
+      # Early return if no files to process
+      if file_paths_data.nil? || file_paths_data.empty?
+        logger.warn "⚠️ No files provided for processing in session #{session_id}"
+        return
+      end
+      
       batch_size = 10  # Process 10 files at a time for async jobs
       
       file_paths_data.each_slice(batch_size).with_index do |file_batch, batch_index|
-        Rails.logger.info "📦 Processing batch #{batch_index + 1} of #{(total_files.to_f / batch_size).ceil}"
+        logger.info "📦 Processing batch #{batch_index + 1} of #{(total_files.to_f / batch_size).ceil}"
         
         file_batch.each do |file_data|
           file_start_time = Time.current
@@ -73,7 +81,7 @@ module Ragdoll
               next
             end
             
-            Rails.logger.info "🔄 Processing file: #{original_filename}"
+            logger.info "🔄 Processing file: #{original_filename}"
             
             # Broadcast progress update
             progress_percentage = ((processed_count.to_f / total_files) * 100).round(1)
@@ -111,7 +119,7 @@ module Ragdoll
                 total_files: total_files
               })
               
-              Rails.logger.info "✅ Successfully processed: #{original_filename}"
+              logger.info "✅ Successfully processed: #{original_filename}"
               
               # Broadcast success
               ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
@@ -137,7 +145,7 @@ module Ragdoll
                 file_size: File.size(temp_path)
               })
               
-              Rails.logger.error "❌ Failed to process: #{original_filename} - #{error_message}"
+              logger.error "❌ Failed to process: #{original_filename} - #{error_message}"
               
               # Broadcast error
               ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
@@ -168,8 +176,8 @@ module Ragdoll
               total_files: total_files
             })
             
-            Rails.logger.error "💥 Exception processing file #{file_data[:original_filename]}: #{e.message}"
-            Rails.logger.error e.backtrace.join("\n")
+            logger.error "💥 Exception processing file #{file_data[:original_filename]}: #{e.message}"
+            logger.error e.backtrace.join("\n")
             
             # Broadcast error
             ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
@@ -215,8 +223,8 @@ module Ragdoll
         avg_file_duration: total_files > 0 ? (total_duration / total_files).round(3) : 0
       })
       
-      Rails.logger.info "🎉 Bulk processing completed for session #{session_id}"
-      Rails.logger.info "📊 Results: #{processed_count}/#{total_files} successful, #{failed_files.size} failed"
+      logger.info "🎉 Bulk processing completed for session #{session_id}"
+      logger.info "📊 Results: #{processed_count}/#{total_files} successful, #{failed_files.size} failed"
       
     rescue => e
       total_duration = Time.current - start_time
@@ -230,8 +238,8 @@ module Ragdoll
         job_id: job_id
       })
       
-      Rails.logger.error "💀 Bulk processing job failed for session #{session_id}: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      logger.error "💀 Bulk processing job failed for session #{session_id}: #{e.message}"
+      logger.error e.backtrace.join("\n")
       
       # Broadcast job failure
       ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
