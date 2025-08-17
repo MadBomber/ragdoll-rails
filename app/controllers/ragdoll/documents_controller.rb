@@ -3,7 +3,7 @@
 module Ragdoll
   class DocumentsController < ApplicationController
     before_action :set_document, only: [:show, :edit, :update, :destroy, :preview, :reprocess, :download]
-    skip_before_action :verify_authenticity_token, only: [:upload_async, :bulk_upload]
+    skip_before_action :verify_authenticity_token, only: [:upload_async, :bulk_upload, :create]
     
     def index
       @documents = ::Ragdoll::Document.all
