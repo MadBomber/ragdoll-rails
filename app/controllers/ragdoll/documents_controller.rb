@@ -3,7 +3,7 @@
 module Ragdoll
   class DocumentsController < ApplicationController
     before_action :set_document, only: [:show, :edit, :update, :destroy, :preview, :reprocess, :download]
-    skip_before_action :verify_authenticity_token, only: [:upload_async]
+    skip_before_action :verify_authenticity_token, only: [:upload_async, :bulk_upload]
     
     def index
       @documents = ::Ragdoll::Document.all
@@ -164,12 +164,72 @@ module Ragdoll
     end
     
     def bulk_upload
-      Rails.logger.info "🔍 BULK UPLOAD METHOD CALLED - SIMPLE VERSION"
-      flash[:notice] = "Test: Bulk upload method was called successfully"
+      logger.info "🔍 BULK UPLOAD METHOD CALLED"
+      logger.info "📊 Request params: #{params.inspect}"
+      logger.info "📊 Session ID: #{session.id}"
+      
+      if params[:directory_files].present?
+        # Use temp_session_id from frontend, session ID, or request ID as fallback
+        session_id = if params[:temp_session_id].present?
+                       params[:temp_session_id]
+                     elsif session.id.present?
+                       session.id.to_s
+                     else
+                       request.request_id
+                     end
+        
+        logger.info "📊 Using session_id: #{session_id}"
+        
+        uploaded_files = params[:directory_files]
+        force_duplicate = params[:force_duplicate] == '1'
+        
+        # Ensure uploaded_files is always an array
+        uploaded_files = [uploaded_files] unless uploaded_files.is_a?(Array)
+        
+        logger.info "📁 Processing #{uploaded_files.size} files"
+        
+        # Prepare file data for background job
+        file_paths_data = []
+        uploaded_files.each_with_index do |file, index|
+          next unless file.respond_to?(:original_filename)
+          
+          begin
+            # Generate unique temp filename
+            file_id = "#{session_id}_#{index}_#{Time.current.to_i}"
+            temp_path = ::Rails.root.join('tmp', 'uploads', "#{file_id}_#{file.original_filename}")
+            FileUtils.mkdir_p(File.dirname(temp_path))
+            File.binwrite(temp_path, file.read)
+            
+            file_paths_data << {
+              temp_path: temp_path.to_s,
+              original_filename: file.original_filename
+            }
+            
+            logger.info "📄 Queued file: #{file.original_filename}"
+          rescue => e
+            logger.error "❌ Failed to prepare file #{file.original_filename}: #{e.message}"
+          end
+        end
+        
+        if file_paths_data.any?
+          # Queue background job for processing
+          ::Ragdoll::BulkDocumentProcessingJob.perform_later(session_id, file_paths_data, force_duplicate)
+          
+          logger.info "🚀 Queued bulk processing job for #{file_paths_data.size} files"
+          flash[:notice] = "Upload started! Processing #{file_paths_data.size} files in the background. You can monitor progress below."
+        else
+          logger.warn "⚠️ No valid files found for processing"
+          flash[:alert] = "No valid files found for processing."
+        end
+      else
+        logger.warn "⚠️ No files provided in bulk upload"
+        flash[:alert] = "Please select files to upload."
+      end
+      
       redirect_to ragdoll.documents_path
     rescue => e
-      Rails.logger.error "💥 Fatal error in bulk_upload: #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
+      logger.error "💥 Fatal error in bulk_upload: #{e.message}"
+      logger.error e.backtrace.join("\n")
       flash[:alert] = "Upload failed: #{e.message}"
       redirect_to ragdoll.documents_path
     end
