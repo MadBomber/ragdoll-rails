@@ -86,6 +86,23 @@
                   </div>
                 </div>
                 
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input type="checkbox" 
+                           name="ragdoll_document[force_duplicate]" 
+                           value="1"
+                           id="progress_force_duplicate"
+                           class="form-check-input">
+                    <label for="progress_force_duplicate" class="form-check-label">
+                      <i class="fas fa-copy me-1 text-warning"></i>
+                      Allow duplicate documents
+                    </label>
+                    <div class="form-text">
+                      Check this to add documents even if duplicates already exist in the system
+                    </div>
+                  </div>
+                </div>
+                
                 <button type="submit" class="btn btn-primary" id="progress-upload-btn">
                   <i class="fas fa-upload me-2"></i>
                   Upload Files with Progress
@@ -168,6 +185,21 @@
                 </div>
               </div>
               
+              <div class="mb-3">
+                <div class="form-check">
+                  <%= form.check_box :force_duplicate, 
+                                     { class: "form-check-input", id: "text_force_duplicate" }, 
+                                     "1", "0" %>
+                  <label for="text_force_duplicate" class="form-check-label">
+                    <i class="fas fa-copy me-1 text-warning"></i>
+                    Allow duplicate documents
+                  </label>
+                  <div class="form-text">
+                    Check this to add documents even if duplicates already exist in the system
+                  </div>
+                </div>
+              </div>
+              
               <%= form.submit "Add Document", class: "btn btn-primary", id: "text-content-btn" %>
             <% end %>
           </div>
@@ -194,6 +226,23 @@
                 </div>
                 <div class="invalid-feedback">
                   Please select a directory.
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <div class="form-check">
+                  <input type="checkbox" 
+                         name="force_duplicate" 
+                         value="1"
+                         id="directory_force_duplicate"
+                         class="form-check-input">
+                  <label for="directory_force_duplicate" class="form-check-label">
+                    <i class="fas fa-copy me-1 text-warning"></i>
+                    Allow duplicate documents
+                  </label>
+                  <div class="form-text">
+                    Check this to add documents even if duplicates already exist in the system
+                  </div>
                 </div>
               </div>
               
@@ -317,7 +366,8 @@
           <li><i class="fas fa-tags text-primary"></i> Metadata extraction</li>
           <li><i class="fas fa-language text-success"></i> Multi-language support</li>
           <li><i class="fas fa-chart-line text-info"></i> Usage analytics</li>
-          <li><i class="fas fa-sync text-warning"></i> Reprocessing support</li>
+          <li><i class="fas fa-copy text-warning"></i> Duplicate detection</li>
+          <li><i class="fas fa-sync text-secondary"></i> Reprocessing support</li>
         </ul>
       </div>
     </div>
@@ -395,11 +445,19 @@ document.addEventListener('DOMContentLoaded', function() {
       const submitBtn = document.getElementById('progress-upload-btn');
       const progressContainer = document.getElementById('progress-container');
       
-      // Validate files
+      // Validate files and log detailed information
       if (!fileInput.files.length) {
         alert('Please select at least one file.');
         return;
       }
+      
+      // Log detailed file selection information for debugging
+      console.log('📁 File selection analysis:');
+      console.log(`   Files selected by user: ${fileInput.files.length}`);
+      console.log('   File details:');
+      Array.from(fileInput.files).forEach((file, index) => {
+        console.log(`     ${index + 1}. ${file.name} (${file.size} bytes, ${file.type || 'unknown type'})`);
+      });
       
       // Set upload in progress flag
       uploadInProgress = true;
@@ -441,6 +499,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add the temporary session ID to the form data so backend uses it
         if (temporarySessionId) {
           formData.append('temp_session_id', temporarySessionId);
+        }
+        
+        // Add force duplicate setting if checked
+        const forceDuplicateCheckbox = document.getElementById('progress_force_duplicate');
+        if (forceDuplicateCheckbox && forceDuplicateCheckbox.checked) {
+          formData.append('ragdoll_document[force_duplicate]', '1');
         }
         
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
@@ -567,6 +631,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Store file mapping for progress tracking
   let fileMapping = new Map();
+  let fileTimeouts = new Map(); // Track timeouts for each file
+  const FILE_TIMEOUT = 10 * 60 * 1000; // 10 minutes timeout
   
   // Setup progress display for files
   function setupProgressDisplay(files) {
@@ -599,6 +665,12 @@ document.addEventListener('DOMContentLoaded', function() {
       // Store mapping for easy lookup
       fileMapping.set(file.name, index);
       console.log(`📝 Mapped file "${file.name}" to index ${index}`);
+      
+      // Set up timeout for this file
+      const timeoutId = setTimeout(() => {
+        handleFileTimeout(file.name, index);
+      }, FILE_TIMEOUT);
+      fileTimeouts.set(file.name, timeoutId);
     });
     
     console.log('🗺️ Final file mapping:', Array.from(fileMapping.entries()));
@@ -731,11 +803,13 @@ document.addEventListener('DOMContentLoaded', function() {
       statusSpan.textContent = 'Complete ✓';
       iconSpan.className = 'fas fa-check-circle text-success';
       fileItem.className = 'mb-2 p-2 border rounded bg-success text-white';
+      clearFileTimeout(filename);
       calculateOverallProgress();
     } else if (status === 'error') {
       statusSpan.textContent = 'Error: ' + message;
       iconSpan.className = 'fas fa-exclamation-circle text-danger';
       fileItem.className = 'mb-2 p-2 border rounded bg-danger text-white';
+      clearFileTimeout(filename);
       calculateOverallProgress();
     }
   }
@@ -805,6 +879,40 @@ document.addEventListener('DOMContentLoaded', function() {
     if (statusEl) {
       statusEl.textContent = message;
       statusEl.className = `text-${type === 'danger' ? 'danger' : 'muted'} mt-2 d-block`;
+    }
+  }
+  
+  // Handle file timeout
+  function handleFileTimeout(filename, fileIndex) {
+    console.warn(`⏰ File timeout detected for: ${filename}`);
+    
+    const fileItem = document.getElementById(`file-${fileIndex}`);
+    const statusSpan = document.getElementById(`file-status-${fileIndex}`);
+    const iconSpan = document.getElementById(`file-icon-${fileIndex}`);
+    
+    if (fileItem && statusSpan) {
+      // Check if file is still in progress (not completed or errored)
+      if (!fileItem.className.includes('bg-success') && !fileItem.className.includes('bg-danger')) {
+        statusSpan.textContent = 'Timeout - job may be stuck';
+        iconSpan.className = 'fas fa-clock text-warning';
+        fileItem.className = 'mb-2 p-2 border rounded bg-warning text-dark';
+        
+        updateProgressStatus(`File processing timeout detected for ${filename}. This may indicate a stuck job.`);
+        calculateOverallProgress();
+      }
+    }
+    
+    // Clean up the timeout
+    fileTimeouts.delete(filename);
+  }
+  
+  // Clear file timeout
+  function clearFileTimeout(filename) {
+    const timeoutId = fileTimeouts.get(filename);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      fileTimeouts.delete(filename);
+      console.log(`🧹 Cleared timeout for: ${filename}`);
     }
   }
   
@@ -940,6 +1048,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Generate session ID for progress tracking
     const sessionId = generateTemporarySessionId();
     formData.append('temp_session_id', sessionId);
+    
+    // Add force duplicate setting if checked
+    const directoryForceDuplicateCheckbox = document.getElementById('directory_force_duplicate');
+    if (directoryForceDuplicateCheckbox && directoryForceDuplicateCheckbox.checked) {
+      formData.append('force_duplicate', '1');
+    }
     
     // Setup ActionCable for directory progress if available
     if (checkActionCableAvailability()) {

@@ -29,6 +29,9 @@ module Ragdoll
         begin
           ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", broadcast_data)
           ::Rails.logger.info "✅ ActionCable broadcast sent successfully"
+          
+          # Track job start in monitoring system
+          track_job_progress(session_id, file_id, filename, 0, 'started')
         rescue => e
           ::Rails.logger.error "❌ ActionCable broadcast failed: #{e.message}"
           ::Rails.logger.error e.backtrace.first(3)
@@ -36,11 +39,13 @@ module Ragdoll
 
         # Simulate progress updates during processing
         broadcast_progress(session_id, file_id, filename, 25, 'Reading file...')
+        track_job_progress(session_id, file_id, filename, 25, 'processing')
         
         # Use Ragdoll to add document
         result = ::Ragdoll.add_document(path: temp_path)
         
         broadcast_progress(session_id, file_id, filename, 75, 'Generating embeddings...')
+        track_job_progress(session_id, file_id, filename, 75, 'processing')
         
         if result[:success] && result[:document_id]
           document = ::Ragdoll::Document.find(result[:document_id])
@@ -59,6 +64,9 @@ module Ragdoll
           begin
             ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", completion_data)
             ::Rails.logger.info "✅ Completion broadcast sent successfully"
+            
+            # Mark job as completed in monitoring system
+            mark_job_completed(session_id, file_id)
           rescue => e
             ::Rails.logger.error "❌ Completion broadcast failed: #{e.message}"
           end
@@ -83,6 +91,9 @@ module Ragdoll
         begin
           ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", error_data)
           ::Rails.logger.info "✅ Error broadcast sent successfully"
+          
+          # Mark job as failed in monitoring system
+          mark_job_failed(session_id, file_id)
         rescue => e
           ::Rails.logger.error "❌ Error broadcast failed: #{e.message}"
         end
@@ -126,6 +137,30 @@ module Ragdoll
       
       # Small delay to simulate processing time
       sleep(0.5)
+    end
+    
+    def track_job_progress(session_id, file_id, filename, progress, status)
+      if defined?(JobFailureMonitorService)
+        JobFailureMonitorService.track_job_progress(session_id, file_id, filename, progress, status)
+      end
+    rescue => e
+      ::Rails.logger.error "❌ Failed to track job progress: #{e.message}"
+    end
+    
+    def mark_job_completed(session_id, file_id)
+      if defined?(JobFailureMonitorService)
+        JobFailureMonitorService.mark_job_completed(session_id, file_id)
+      end
+    rescue => e
+      ::Rails.logger.error "❌ Failed to mark job as completed: #{e.message}"
+    end
+    
+    def mark_job_failed(session_id, file_id)
+      if defined?(JobFailureMonitorService)
+        JobFailureMonitorService.mark_job_failed(session_id, file_id)
+      end
+    rescue => e
+      ::Rails.logger.error "❌ Failed to mark job as failed: #{e.message}"
     end
   end
 end

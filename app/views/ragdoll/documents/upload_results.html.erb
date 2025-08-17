@@ -16,7 +16,13 @@
         <div>
           <% successful_count = @results&.count { |r| r[:success] } || 0 %>
           <% failed_count = (@results&.length || 0) - successful_count %>
-          <span class="badge bg-success me-1"><%= successful_count %> successful</span>
+          <% duplicate_count = @results&.count { |r| r[:success] && r[:duplicate] } || 0 %>
+          <% new_count = successful_count - duplicate_count %>
+          
+          <span class="badge bg-success me-1"><%= new_count %> new</span>
+          <% if duplicate_count > 0 %>
+            <span class="badge bg-warning me-1"><%= duplicate_count %> duplicate<%= duplicate_count > 1 ? 's' : '' %></span>
+          <% end %>
           <% if failed_count > 0 %>
             <span class="badge bg-danger"><%= failed_count %> failed</span>
           <% end %>
@@ -29,9 +35,15 @@
               <div class="d-flex align-items-start">
                 <div class="result-icon me-3 mt-1">
                   <% if result[:success] %>
-                    <i class="fas fa-check-circle fa-lg text-success"></i>
+                    <% if result[:duplicate] && !result[:forced] %>
+                      <i class="fas fa-copy fa-lg text-warning" title="Duplicate detected"></i>
+                    <% elsif result[:duplicate] && result[:forced] %>
+                      <i class="fas fa-check-circle fa-lg text-success" title="Duplicate forced"></i>
+                    <% else %>
+                      <i class="fas fa-check-circle fa-lg text-success" title="Successfully added"></i>
+                    <% end %>
                   <% else %>
-                    <i class="fas fa-times-circle fa-lg text-danger"></i>
+                    <i class="fas fa-times-circle fa-lg text-danger" title="Failed"></i>
                   <% end %>
                 </div>
                 
@@ -42,7 +54,17 @@
                       <%= result[:file] %>
                     </h6>
                     <% if result[:success] %>
-                      <%= render Ragdoll::StatusBadgeComponent.new(status: "success") %>
+                      <% if result[:duplicate] && !result[:forced] %>
+                        <span class="badge bg-warning">
+                          <i class="fas fa-copy me-1"></i>Duplicate Detected
+                        </span>
+                      <% elsif result[:duplicate] && result[:forced] %>
+                        <span class="badge bg-success">
+                          <i class="fas fa-exclamation-triangle me-1"></i>Duplicate Forced
+                        </span>
+                      <% else %>
+                        <%= render Ragdoll::StatusBadgeComponent.new(status: "success") %>
+                      <% end %>
                     <% else %>
                       <%= render Ragdoll::StatusBadgeComponent.new(status: "failed") %>
                     <% end %>
@@ -51,9 +73,15 @@
                   <% if result[:success] %>
                     <% if result[:document] %>
                       <p class="text-muted mb-2">
-                        Document successfully added to the system. 
+                        <% if result[:duplicate] && !result[:forced] %>
+                          <strong>Duplicate detected:</strong> This document already exists in the system. The existing document was returned instead of creating a duplicate.
+                        <% elsif result[:duplicate] && result[:forced] %>
+                          <strong>Duplicate forced:</strong> A new document was created despite an existing duplicate in the system.
+                        <% else %>
+                          Document successfully added to the system.
+                        <% end %>
                         <% if result[:message] %>
-                          <%= result[:message] %>
+                          <br><em><%= result[:message] %></em>
                         <% end %>
                       </p>
                       <div class="small text-muted">

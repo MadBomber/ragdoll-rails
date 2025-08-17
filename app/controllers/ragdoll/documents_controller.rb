@@ -29,6 +29,7 @@ module Ragdoll
     def create
       if params[:ragdoll_document] && params[:ragdoll_document][:files].present?
         uploaded_files = params[:ragdoll_document][:files]
+        force_duplicate = params[:ragdoll_document][:force_duplicate] == '1'
         @results = []
         
         # Ensure uploaded_files is always an array
@@ -44,13 +45,21 @@ module Ragdoll
             FileUtils.mkdir_p(File.dirname(temp_path))
             File.binwrite(temp_path, file.read)
             
-            # Use Ragdoll to add document
-            result = ::Ragdoll.add_document(path: temp_path.to_s)
+            # Use Ragdoll to add document with force option
+            result = ::Ragdoll.add_document(path: temp_path.to_s, force: force_duplicate)
             
             # Get the actual document object if successful
             if result[:success] && result[:document_id]
               document = ::Ragdoll::Document.find(result[:document_id])
-              @results << { file: file.original_filename, success: true, document: document, message: result[:message] }
+              duplicate_detected = result[:duplicate] || (result[:message] && result[:message].include?('already exists'))
+              @results << { 
+                file: file.original_filename, 
+                success: true, 
+                document: document, 
+                message: result[:message],
+                duplicate: duplicate_detected,
+                forced: force_duplicate
+              }
             else
               @results << { file: file.original_filename, success: false, error: result[:error] || "Unknown error" }
             end
@@ -66,16 +75,34 @@ module Ragdoll
         render :upload_results
       elsif params[:ragdoll_document] && params[:ragdoll_document][:text_content].present?
         begin
+          force_duplicate = params[:ragdoll_document][:force_duplicate] == '1'
+          
           # For text content, we need to save it as a file first since Ragdoll.add_document expects a file
           temp_path = ::Rails.root.join('tmp', 'uploads', "#{SecureRandom.hex(8)}.txt")
           FileUtils.mkdir_p(File.dirname(temp_path))
           File.write(temp_path, params[:ragdoll_document][:text_content])
           
-          @document = ::Ragdoll.add_document(path: temp_path.to_s)
+          result = ::Ragdoll.add_document(path: temp_path.to_s, force: force_duplicate)
           
           # Clean up temp file
           File.delete(temp_path) if File.exist?(temp_path)
-          redirect_to ragdoll.document_path(@document), notice: 'Document was successfully created.'
+          
+          if result[:success] && result[:document_id]
+            document = ::Ragdoll::Document.find(result[:document_id])
+            duplicate_detected = result[:duplicate] || (result[:message] && result[:message].include?('already exists'))
+            
+            if duplicate_detected && !force_duplicate
+              redirect_to ragdoll.document_path(document), notice: 'Document already exists - returned existing document.'
+            elsif duplicate_detected && force_duplicate
+              redirect_to ragdoll.document_path(document), notice: 'Document was successfully created (duplicate forced).'
+            else
+              redirect_to ragdoll.document_path(document), notice: 'Document was successfully created.'
+            end
+          else
+            @document = ::Ragdoll::Document.new
+            @document.errors.add(:base, result[:error] || "Unknown error occurred")
+            render :new
+          end
         rescue => e
           @document = ::Ragdoll::Document.new
           @document.errors.add(:base, e.message)
@@ -175,8 +202,9 @@ module Ragdoll
               temp_file.write(content)
               temp_file.close
               
-              # Add document using ragdoll
-              result = ::Ragdoll.add_document(path: temp_file.path)
+              # Add document using ragdoll with force option if provided
+              force_duplicate = params[:force_duplicate] == '1'
+              result = ::Ragdoll.add_document(path: temp_file.path, force: force_duplicate)
               
               if result
                 successful_count += 1
@@ -262,6 +290,24 @@ module Ragdoll
         # Ensure uploaded_files is always an array
         uploaded_files = [uploaded_files] unless uploaded_files.is_a?(Array)
         
+        # Log file analysis for debugging count discrepancies
+        total_files = uploaded_files.count
+        valid_files = uploaded_files.select { |f| f && f.respond_to?(:original_filename) && f.original_filename.present? }
+        filtered_count = total_files - valid_files.count
+        
+        logger.info "📊 File upload analysis:"
+        logger.info "   Total files in upload array: #{total_files}"
+        logger.info "   Valid files with original_filename: #{valid_files.count}"
+        logger.info "   Files filtered out: #{filtered_count}"
+        
+        if filtered_count > 0
+          uploaded_files.each_with_index do |file, index|
+            unless file && file.respond_to?(:original_filename) && file.original_filename.present?
+              logger.warn "   Filtered file #{index + 1}: #{file.class} - #{file.inspect}"
+            end
+          end
+        end
+        
         processed_count = 0
         results = []
         
@@ -293,8 +339,9 @@ module Ragdoll
             rescue => job_error
               logger.warn "Background job failed, processing directly: #{job_error.message}"
               
-              # Process directly if job system is not available
-              result = ::Ragdoll.add_document(path: temp_path.to_s)
+              # Process directly if job system is not available  
+              force_duplicate = params[:ragdoll_document][:force_duplicate] == '1'
+              result = ::Ragdoll.add_document(path: temp_path.to_s, force: force_duplicate)
               
               if result[:success] && result[:document_id]
                 document = ::Ragdoll::Document.find(result[:document_id])
@@ -367,7 +414,7 @@ module Ragdoll
     end
     
     def document_params
-      params.require(:ragdoll_document).permit(:title, :content, :metadata, :status, :text_content, files: [])
+      params.require(:ragdoll_document).permit(:title, :content, :metadata, :status, :text_content, :force_duplicate, files: [])
     end
   end
 end
