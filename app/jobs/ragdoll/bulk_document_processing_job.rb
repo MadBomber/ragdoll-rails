@@ -4,10 +4,33 @@ module Ragdoll
   class BulkDocumentProcessingJob < ApplicationJob
     queue_as :ragdoll
     
+    private
+    
+    def safe_log_operation(operation, details = {})
+      return unless defined?(RagdollLogging)
+      RagdollLogging.log_operation(operation, details)
+    rescue => e
+      Rails.logger.debug "Failed to log operation #{operation}: #{e.message}"
+    end
+    
+    def safe_log_error(operation, error, details = {})
+      return unless defined?(RagdollLogging)
+      RagdollLogging.log_error(operation, error, details)
+    rescue => e
+      Rails.logger.debug "Failed to log error #{operation}: #{e.message}"
+    end
+    
+    def safe_log_performance(operation, duration, details = {})
+      return unless defined?(RagdollLogging)
+      RagdollLogging.log_performance(operation, duration, details)
+    rescue => e
+      Rails.logger.debug "Failed to log performance #{operation}: #{e.message}"
+    end
+    
     def perform(session_id, file_paths_data, force_duplicate = false)
       start_time = Time.current
       
-      RagdollLogging.log_operation("bulk_processing_start", {
+      safe_log_operation("bulk_processing_start", {
         session_id: session_id,
         file_count: file_paths_data.size,
         force_duplicate: force_duplicate,
@@ -32,7 +55,7 @@ module Ragdoll
             temp_path = file_data[:temp_path]
             original_filename = file_data[:original_filename]
             
-            RagdollLogging.log_operation("file_processing_start", {
+            safe_log_operation("file_processing_start", {
               session_id: session_id,
               filename: original_filename,
               temp_path: temp_path,
@@ -42,7 +65,7 @@ module Ragdoll
             
             unless File.exist?(temp_path)
               error_msg = "Temporary file not found: #{temp_path}"
-              RagdollLogging.log_error("file_processing", StandardError.new(error_msg), {
+              safe_log_error("file_processing", StandardError.new(error_msg), {
                 session_id: session_id,
                 filename: original_filename,
                 temp_path: temp_path
@@ -68,7 +91,7 @@ module Ragdoll
             result = ::Ragdoll.add_document(path: temp_path, force: force_duplicate)
             ragdoll_duration = Time.current - ragdoll_start_time
             
-            RagdollLogging.log_performance("ragdoll_add_document", ragdoll_duration, {
+            safe_log_performance("ragdoll_add_document", ragdoll_duration, {
               session_id: session_id,
               filename: original_filename,
               result_success: result && result[:success],
@@ -79,7 +102,7 @@ module Ragdoll
               processed_count += 1
               file_duration = Time.current - file_start_time
               
-              RagdollLogging.log_operation("file_processing_success", {
+              safe_log_operation("file_processing_success", {
                 session_id: session_id,
                 filename: original_filename,
                 document_id: result[:document_id],
@@ -105,7 +128,7 @@ module Ragdoll
               error_message = result ? result[:error] : 'Unknown error'
               file_duration = Time.current - file_start_time
               
-              RagdollLogging.log_error("file_processing", StandardError.new(error_message), {
+              safe_log_error("file_processing", StandardError.new(error_message), {
                 session_id: session_id,
                 filename: original_filename,
                 processing_duration: file_duration.round(3),
@@ -135,7 +158,7 @@ module Ragdoll
             failed_files << (file_data[:original_filename] || 'unknown file')
             file_duration = Time.current - file_start_time
             
-            RagdollLogging.log_error("file_processing_exception", e, {
+            safe_log_error("file_processing_exception", e, {
               session_id: session_id,
               filename: file_data[:original_filename],
               temp_path: file_data[:temp_path],
@@ -182,7 +205,7 @@ module Ragdoll
       
       total_duration = Time.current - start_time
       
-      RagdollLogging.log_operation("bulk_processing_complete", {
+      safe_log_operation("bulk_processing_complete", {
         session_id: session_id,
         total_files: total_files,
         processed_count: processed_count,
@@ -198,7 +221,7 @@ module Ragdoll
     rescue => e
       total_duration = Time.current - start_time
       
-      RagdollLogging.log_error("bulk_processing_job_failure", e, {
+      safe_log_error("bulk_processing_job_failure", e, {
         session_id: session_id,
         total_files: total_files,
         processed_count: processed_count,

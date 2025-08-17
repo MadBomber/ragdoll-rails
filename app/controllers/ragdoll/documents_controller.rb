@@ -241,12 +241,16 @@ module Ragdoll
           end
           
         rescue => e
-          RagdollLogging.log_error("bulk_upload_preparation", e, {
-            session_id: session_id,
-            files_count: files&.size || 0,
-            force_duplicate: force_duplicate,
-            prepared_files_count: file_paths_data&.size || 0
-          })
+          begin
+            RagdollLogging.log_error("bulk_upload_preparation", e, {
+              session_id: session_id,
+              files_count: files&.size || 0,
+              force_duplicate: force_duplicate,
+              prepared_files_count: file_paths_data&.size || 0
+            })
+          rescue NameError
+            # RagdollLogging not available, skip detailed logging
+          end
           
           Rails.logger.error "💥 Bulk upload preparation error: #{e.message}"
           Rails.logger.error e.backtrace.join("\n")
