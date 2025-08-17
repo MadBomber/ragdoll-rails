@@ -164,16 +164,20 @@ module Ragdoll
     end
     
     def bulk_upload
+      Rails.logger.info "🔍 Starting bulk_upload method"
       Rails.logger.debug "🔍 Bulk upload params: #{params.inspect}"
       Rails.logger.debug "🔍 Directory files param: #{params[:directory_files].inspect}"
       Rails.logger.debug "🔍 Directory files class: #{params[:directory_files].class}"
       
+      Rails.logger.info "🔍 Checking if directory_files present"
       if params[:directory_files].present?
         begin
           # Filter out empty strings and ensure only file objects remain
+          Rails.logger.info "🔍 Filtering files..."
           files = params[:directory_files].reject do |file|
             file.blank? || !file.respond_to?(:original_filename)
           end
+          Rails.logger.info "🔍 Successfully filtered #{files.size} files from #{params[:directory_files].size} total"
           Rails.logger.debug "🔍 Files array after filtering: #{files.inspect}"
           Rails.logger.debug "🔍 First file class: #{files.first.class if files.respond_to?(:first)}"
           
@@ -263,6 +267,11 @@ module Ragdoll
         flash[:alert] = "No files selected for upload."
       end
       
+      redirect_to ragdoll.documents_path
+    rescue => e
+      Rails.logger.error "💥 Fatal error in bulk_upload: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      flash[:alert] = "Upload failed: #{e.message}"
       redirect_to ragdoll.documents_path
     end
     
