@@ -1003,8 +1003,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  if (directoryForm) {
-    directoryForm.addEventListener('submit', function(e) {
+  // Function to attach directory form listener
+  function attachDirectoryFormListener() {
+    const directoryForm = document.getElementById('directory-upload-form');
+    if (directoryForm && !directoryForm.ragdollListenerAttached) {
+      console.log('📋 Attaching directory form event listener...');
+      directoryForm.ragdollListenerAttached = true; // Prevent duplicate listeners
+      
+      directoryForm.addEventListener('submit', function(e) {
       e.preventDefault(); // Prevent default form submission
       
       const submitBtn = document.getElementById('directory-upload-btn');
@@ -1040,8 +1046,34 @@ document.addEventListener('DOMContentLoaded', function() {
         setupDirectoryProgress(fileInput.files);
       }
       
+      // Initialize bulk upload status popup if available
+      if (window.bulkUploadStatus) {
+        const sessionId = generateTemporarySessionId();
+        window.bulkUploadStatus.startUpload(sessionId, fileInput.files.length);
+        
+        // Store session ID for later use
+        window.currentUploadSessionId = sessionId;
+      }
+      
       // Submit form using fetch for better progress control
       submitDirectoryUpload();
+    });
+    } else if (directoryForm) {
+      console.log('📋 Directory form listener already attached');
+    } else {
+      console.log('📋 Directory form not found');
+    }
+  }
+  
+  // Try to attach the listener immediately
+  attachDirectoryFormListener();
+  
+  // Also try when the directory tab becomes active
+  const directoryTab = document.getElementById('directory-tab');
+  if (directoryTab) {
+    directoryTab.addEventListener('shown.bs.tab', function() {
+      console.log('📋 Directory tab activated, attaching listener...');
+      attachDirectoryFormListener();
     });
   }
   
@@ -1063,8 +1095,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('directory-upload-form');
     const formData = new FormData(form);
     
-    // Generate session ID for progress tracking
-    const sessionId = generateTemporarySessionId();
+    // Use stored session ID or generate new one
+    const sessionId = window.currentUploadSessionId || generateTemporarySessionId();
     formData.append('temp_session_id', sessionId);
     
     // Add force duplicate setting if checked
@@ -1086,7 +1118,9 @@ document.addEventListener('DOMContentLoaded', function() {
         method: 'POST',
         body: formData,
         headers: {
-          'X-CSRF-Token': csrfToken ? csrfToken.content : ''
+          'X-CSRF-Token': csrfToken ? csrfToken.content : '',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         }
       });
       
@@ -1096,27 +1130,65 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Simulate upload completion (since we don't have real upload progress from server)
       updateDirectoryUploadProgress(100);
-      updateDirectoryProgressStatus('Upload complete! Processing files...');
+      updateDirectoryProgressStatus('Upload complete! Files queued for processing...');
       
-      const result = await response.text(); // Get HTML response
+      const result = await response.json(); // Parse JSON response
       
       // Clear upload flag since upload phase is complete
       uploadInProgress = false;
       
-      // Check if response indicates success (contains success message or redirect)
-      if (result.includes('successfully') || result.includes('imported') || response.redirected) {
-        updateDirectoryProgressStatus('Directory import completed successfully!');
+      if (result.success) {
+        console.log('✅ Directory upload successful:', result);
+        console.log('📡 Session ID for tracking:', result.session_id);
+        console.log('📁 Files queued:', result.file_count);
         
-        // Redirect after a short delay to show final status
-        setTimeout(() => {
-          window.location.href = '<%= ragdoll.documents_path %>';
-        }, 2000);
+        // Update the bulk upload status popup to track this session
+        if (window.bulkUploadStatus && result.session_id) {
+          // The popup is already started from form submission, just update status
+          updateDirectoryProgressStatus(`${result.file_count} files queued for background processing. Tracking progress...`);
+        }
+        
+        // DON'T redirect immediately - let the popup track the background job
+        // The popup will handle the redirect when processing is complete
+        
+        // Hide the in-page progress indicators since the popup is handling it
+        const progressContainer = document.getElementById('directory-progress-container');
+        if (progressContainer) {
+          setTimeout(() => {
+            progressContainer.style.display = 'none';
+          }, 3000);
+        }
+        
+        // Re-enable the form for another upload if needed
+        const submitBtn = document.getElementById('directory-upload-btn');
+        if (submitBtn) {
+          const spinner = submitBtn.querySelector('.spinner-border');
+          const btnText = submitBtn.querySelector('.btn-text');
+          
+          submitBtn.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+          if (btnText) btnText.textContent = 'Import Directory';
+        }
+        
+        // Hide processing alert
+        const processingAlert = document.getElementById('directory-processing-alert');
+        if (processingAlert) {
+          processingAlert.classList.add('d-none');
+        }
       } else {
-        // Parse any error messages from the response
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = result;
-        const errorMsg = tempDiv.querySelector('.alert-danger')?.textContent?.trim() || 'Import completed with unknown status';
-        updateDirectoryProgressStatus(errorMsg);
+        // Handle error response
+        updateDirectoryProgressStatus('Upload failed: ' + (result.error || 'Unknown error'));
+        
+        // Re-enable form on error
+        const submitBtn = document.getElementById('directory-upload-btn');
+        if (submitBtn) {
+          const spinner = submitBtn.querySelector('.spinner-border');
+          const btnText = submitBtn.querySelector('.btn-text');
+          
+          submitBtn.disabled = false;
+          if (spinner) spinner.classList.add('d-none');
+          if (btnText) btnText.textContent = 'Import Directory';
+        }
       }
       
     } catch (error) {

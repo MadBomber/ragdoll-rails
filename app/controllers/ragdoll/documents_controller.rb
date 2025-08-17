@@ -216,22 +216,58 @@ module Ragdoll
           ::Ragdoll::BulkDocumentProcessingJob.perform_later(session_id, file_paths_data, force_duplicate)
           
           logger.info "🚀 Queued bulk processing job for #{file_paths_data.size} files"
-          flash[:notice] = "Upload started! Processing #{file_paths_data.size} files in the background. You can monitor progress below."
+          
+          # Check if this is an AJAX request
+          if request.xhr? || request.format.json?
+            render json: {
+              success: true,
+              session_id: session_id,
+              file_count: file_paths_data.size,
+              message: "Upload started! Processing #{file_paths_data.size} files in the background."
+            }
+          else
+            flash[:notice] = "Upload started! Processing #{file_paths_data.size} files in the background. You can monitor progress below."
+            redirect_to ragdoll.documents_path
+          end
         else
           logger.warn "⚠️ No valid files found for processing"
-          flash[:alert] = "No valid files found for processing."
+          
+          if request.xhr? || request.format.json?
+            render json: {
+              success: false,
+              error: "No valid files found for processing."
+            }, status: :unprocessable_entity
+          else
+            flash[:alert] = "No valid files found for processing."
+            redirect_to ragdoll.documents_path
+          end
         end
       else
         logger.warn "⚠️ No files provided in bulk upload"
-        flash[:alert] = "Please select files to upload."
+        
+        if request.xhr? || request.format.json?
+          render json: {
+            success: false,
+            error: "Please select files to upload."
+          }, status: :bad_request
+        else
+          flash[:alert] = "Please select files to upload."
+          redirect_to ragdoll.documents_path
+        end
       end
-      
-      redirect_to ragdoll.documents_path
     rescue => e
       logger.error "💥 Fatal error in bulk_upload: #{e.message}"
       logger.error e.backtrace.join("\n")
-      flash[:alert] = "Upload failed: #{e.message}"
-      redirect_to ragdoll.documents_path
+      
+      if request.xhr? || request.format.json?
+        render json: {
+          success: false,
+          error: "Upload failed: #{e.message}"
+        }, status: :internal_server_error
+      else
+        flash[:alert] = "Upload failed: #{e.message}"
+        redirect_to ragdoll.documents_path
+      end
     end
     
     def bulk_delete

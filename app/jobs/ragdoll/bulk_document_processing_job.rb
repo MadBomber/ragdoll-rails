@@ -6,6 +6,12 @@ module Ragdoll
     
     private
     
+    def broadcast_status_update(session_id, data)
+      ActionCable.server.broadcast("bulk_upload_status_#{session_id}", data)
+    rescue => e
+      logger.error "Failed to broadcast status update: #{e.message}"
+    end
+    
     def safe_log_operation(operation, details = {})
       return unless defined?(RagdollLogging)
       RagdollLogging.log_operation(operation, details)
@@ -48,8 +54,21 @@ module Ragdoll
       # Early return if no files to process
       if file_paths_data.nil? || file_paths_data.empty?
         logger.warn "⚠️ No files provided for processing in session #{session_id}"
+        broadcast_status_update(session_id, {
+          type: 'upload_error',
+          error: 'No files provided for processing',
+          status: 'failed'
+        })
         return
       end
+      
+      # Broadcast upload start
+      broadcast_status_update(session_id, {
+        type: 'upload_start',
+        total_files: total_files,
+        status: 'processing',
+        started_at: Time.current.iso8601
+      })
       
       batch_size = 10  # Process 10 files at a time for async jobs
       
@@ -83,15 +102,17 @@ module Ragdoll
             
             logger.info "🔄 Processing file: #{original_filename}"
             
-            # Broadcast progress update
+            # Broadcast file start
             progress_percentage = ((processed_count.to_f / total_files) * 100).round(1)
-            ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
-              type: 'file_progress',
+            broadcast_status_update(session_id, {
+              type: 'file_start',
               filename: original_filename,
               processed: processed_count,
               total: total_files,
               percentage: progress_percentage,
-              status: 'processing'
+              status: 'processing',
+              batch_index: batch_index + 1,
+              total_batches: (total_files.to_f / batch_size).ceil
             })
             
             # Process the document
@@ -122,14 +143,15 @@ module Ragdoll
               logger.info "✅ Successfully processed: #{original_filename}"
               
               # Broadcast success
-              ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
+              broadcast_status_update(session_id, {
                 type: 'file_complete',
                 filename: original_filename,
                 processed: processed_count,
                 total: total_files,
                 percentage: ((processed_count.to_f / total_files) * 100).round(1),
                 status: 'completed',
-                document_id: result[:document_id]
+                document_id: result[:document_id],
+                processing_time: file_duration.round(3)
               })
             else
               failed_files << original_filename
@@ -148,14 +170,15 @@ module Ragdoll
               logger.error "❌ Failed to process: #{original_filename} - #{error_message}"
               
               # Broadcast error
-              ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
+              broadcast_status_update(session_id, {
                 type: 'file_error',
                 filename: original_filename,
                 processed: processed_count,
                 total: total_files,
                 percentage: ((processed_count.to_f / total_files) * 100).round(1),
                 status: 'failed',
-                error: error_message
+                error: error_message,
+                processing_time: file_duration.round(3)
               })
             end
             
@@ -200,18 +223,19 @@ module Ragdoll
       end
       
       # Broadcast final completion
+      total_duration = Time.current - start_time
       final_percentage = 100.0
-      ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
-        type: 'bulk_complete',
+      broadcast_status_update(session_id, {
+        type: 'upload_complete',
         processed: processed_count,
         total: total_files,
         failed: failed_files.size,
         failed_files: failed_files,
         percentage: final_percentage,
-        status: 'completed'
+        status: 'completed',
+        total_duration: total_duration.round(3),
+        completed_at: Time.current.iso8601
       })
-      
-      total_duration = Time.current - start_time
       
       safe_log_operation("bulk_processing_complete", {
         session_id: session_id,
@@ -242,10 +266,14 @@ module Ragdoll
       logger.error e.backtrace.join("\n")
       
       # Broadcast job failure
-      ActionCable.server.broadcast("ragdoll_file_processing_#{session_id}", {
-        type: 'job_error',
+      broadcast_status_update(session_id, {
+        type: 'upload_error',
         error: e.message,
-        status: 'failed'
+        status: 'failed',
+        processed: processed_count,
+        total: total_files,
+        failed_at: Time.current.iso8601,
+        total_duration: total_duration.round(3)
       })
     end
   end
