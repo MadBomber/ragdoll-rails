@@ -170,8 +170,10 @@ module Ragdoll
       
       if params[:directory_files].present?
         begin
-          # Filter out empty strings that Rails includes in file arrays
-          files = params[:directory_files].reject(&:blank?)
+          # Filter out empty strings and ensure only file objects remain
+          files = params[:directory_files].reject do |file|
+            file.blank? || !file.respond_to?(:original_filename)
+          end
           Rails.logger.debug "🔍 Files array after filtering: #{files.inspect}"
           Rails.logger.debug "🔍 First file class: #{files.first.class if files.respond_to?(:first)}"
           
