@@ -21,7 +21,10 @@
             <%= form.text_field :search, placeholder: "Search documents...", value: params[:search], class: "form-control" %>
           </div>
           <div class="col-md-3">
-            <%= form.select :document_type, options_for_select([["All Types", ""]] + @document_types.map { |type| [type.titleize, type] }, params[:document_type]), {}, { class: "form-select" } %>
+            <%= form.select :document_type, options_for_select([["All Types", ""]] + @document_types.map { |type| [type.titleize, type] }, params[:document_type]), {}, { class: "form-select", title: "Document Type filtering is deprecated in unified text-based architecture" } %>
+            <small class="form-text text-warning">
+              <i class="fas fa-exclamation-triangle"></i> Note: All media types are now converted to text for unified search
+            </small>
           </div>
           <div class="col-md-3">
             <%= form.select :status, options_for_select([["All Statuses", ""]] + @statuses.map { |status| [status.titleize, status] }, params[:status]), {}, { class: "form-select" } %>

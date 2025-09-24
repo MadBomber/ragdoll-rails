@@ -4,6 +4,6 @@
 
 module Ragdoll
   module Rails
-    VERSION = "0.1.11"
+    VERSION = "0.1.12"
   end
 end

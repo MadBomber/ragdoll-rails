@@ -2,7 +2,7 @@
 
 FactoryBot.define do
   factory :ragdoll_embedding, class: 'Ragdoll::Embedding' do
-    association :embeddable, factory: :ragdoll_text_content
+    association :embeddable, factory: :ragdoll_unified_content
     sequence(:embedding_vector) { |n| Array.new(1536) { |i| (n + i) / 1000000.0 } }
     model_name { "text-embedding-3-small" }
     token_count { 25 }
