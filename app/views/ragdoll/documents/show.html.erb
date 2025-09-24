@@ -79,7 +79,12 @@
                 <tr>
                   <td><code><%= embedding.id %></code></td>
                   <td>
-                    <%= truncate(embedding.content, length: 100) %>
+                    <span class="content-preview-clickable"
+                          data-full-content="<%= html_escape(embedding.content) %>"
+                          data-embedding-id="<%= embedding.id %>"
+                          style="cursor: pointer; color: #0d6efd; text-decoration: underline;">
+                      <%= truncate(embedding.content, length: 100) %>
+                    </span>
                   </td>
                   <td>
                     <span class="badge bg-secondary">
@@ -186,3 +191,123 @@
     </div>
   </div>
 </div>
+
+<!-- Chunk Content Modal -->
+<div class="modal fade" id="chunkContentModal" tabindex="-1" aria-labelledby="chunkContentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="chunkContentModalLabel">
+          <i class="fas fa-file-text"></i> Chunk Content - ID: <span id="chunkId"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label"><strong>Full Content:</strong></label>
+          <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+            <pre id="chunkFullContent" style="white-space: pre-wrap; font-family: inherit; margin: 0;"></pre>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <small class="text-muted">
+              <strong>Character Count:</strong> <span id="chunkCharCount"></span>
+            </small>
+          </div>
+          <div class="col-md-6">
+            <small class="text-muted">
+              <strong>Word Count:</strong> <span id="chunkWordCount"></span>
+            </small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard()">
+          <i class="fas fa-copy"></i> Copy to Clipboard
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Add click event listeners to all content previews
+  document.querySelectorAll('.content-preview-clickable').forEach(function(element) {
+    element.addEventListener('click', function() {
+      const fullContent = this.dataset.fullContent;
+      const embeddingId = this.dataset.embeddingId;
+
+      // Update modal content
+      document.getElementById('chunkId').textContent = embeddingId;
+      document.getElementById('chunkFullContent').textContent = fullContent;
+      document.getElementById('chunkCharCount').textContent = fullContent.length.toLocaleString();
+      document.getElementById('chunkWordCount').textContent = fullContent.trim().split(/\s+/).length.toLocaleString();
+
+      // Show the modal
+      const modal = new bootstrap.Modal(document.getElementById('chunkContentModal'));
+      modal.show();
+    });
+  });
+});
+
+function copyToClipboard() {
+  const content = document.getElementById('chunkFullContent').textContent;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(content).then(function() {
+      // Show success feedback
+      const copyButton = event.target.closest('button');
+      const originalText = copyButton.innerHTML;
+      copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+      copyButton.classList.remove('btn-outline-secondary');
+      copyButton.classList.add('btn-success');
+
+      setTimeout(function() {
+        copyButton.innerHTML = originalText;
+        copyButton.classList.remove('btn-success');
+        copyButton.classList.add('btn-outline-secondary');
+      }, 2000);
+    }).catch(function(err) {
+      console.error('Failed to copy: ', err);
+      fallbackCopyToClipboard(content);
+    });
+  } else {
+    fallbackCopyToClipboard(content);
+  }
+}
+
+function fallbackCopyToClipboard(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    document.execCommand('copy');
+    // Show success feedback
+    const copyButton = event.target.closest('button');
+    const originalText = copyButton.innerHTML;
+    copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    copyButton.classList.remove('btn-outline-secondary');
+    copyButton.classList.add('btn-success');
+
+    setTimeout(function() {
+      copyButton.innerHTML = originalText;
+      copyButton.classList.remove('btn-success');
+      copyButton.classList.add('btn-outline-secondary');
+    }, 2000);
+  } catch (err) {
+    console.error('Fallback copy failed: ', err);
+    alert('Copy to clipboard failed. Please select and copy the text manually.');
+  }
+
+  document.body.removeChild(textArea);
+}
+</script>

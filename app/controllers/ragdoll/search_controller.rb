@@ -235,7 +235,7 @@ module Ragdoll
                 
                 @detailed_results << {
                   document: document,
-                  content: document.metadata&.dig('summary') || document.title || "No summary available",
+                  content: document.summary || document.metadata&.dig('summary') || document.title || "No summary available",
                   search_type: 'fulltext',
                   similarity: fulltext_similarity
                 }
@@ -264,7 +264,7 @@ module Ragdoll
                       @below_threshold_results << {
                         document_id: document.id,
                         similarity: similarity,
-                        content: document.metadata&.dig('summary') || document.title || "No summary available"
+                        content: document.summary || document.metadata&.dig('summary') || document.title || "No summary available"
                       }
                     end
                   end
