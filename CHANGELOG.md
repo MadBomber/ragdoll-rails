@@ -1,6 +1,36 @@
-# This file documents the changes and version history of the Ragdoll gem.
+# This file documents the changes and version history of the Ragdoll Rails Engine.
 
 ## [Unreleased]
+
+## [0.1.12] - 2025-09-23
+
+### Added
+- Support for unified text-based RAG architecture with cross-modal search capabilities
+- New factory definitions for unified content models (UnifiedDocument, UnifiedContent)
+- Support for image and audio file uploads in unified text conversion workflow
+- Text conversion settings in Rails configuration template (image_detail_level, audio_transcription_provider)
+- Deprecation warnings for document_type filtering in views and controllers
+- Enhanced file type support including images (jpg, jpeg, png, gif) and audio (mp3, wav, m4a)
+
+### Changed
+- **BREAKING**: Migrated from multi-modal architecture to unified text-based RAG system
+- Updated ragdoll_config.rb template to use single embedding model (text-embedding-3-large)
+- Added unified content architecture settings (use_unified_content, text_conversion)
+- Enhanced documents index and search views with deprecation notices for document_type filtering
+- Updated Rails configuration to support all media types for text conversion
+- Modified search controller to log deprecation warnings when document_type filtering is used
+- Updated factory specifications to reference unified content factories
+- Deprecated ragdoll_text_content factory in favor of ragdoll_unified_content
+
+### Fixed
+- Updated factory tests to expect unified content and document factories
+- Corrected references to deprecated text content factories
+
+### Migration Notes
+- All media types (images, audio, documents) are now converted to searchable text
+- Document type filtering is deprecated but still functional for backward compatibility
+- Single embedding model replaces previous type-specific embedding models
+- Cross-modal search now supported (find images by descriptions, audio by transcripts)
 
 ## [0.1.11] - 2025-02-18
 
