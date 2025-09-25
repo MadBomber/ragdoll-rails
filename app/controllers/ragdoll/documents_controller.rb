@@ -255,10 +255,26 @@ module Ragdoll
           redirect_to ragdoll.documents_path
         end
       end
+    rescue Rack::Multipart::MultipartPartLimitError => e
+      max_files = Rails.application.config.multipart_file_limit || Rack::Utils.multipart_part_limit
+      logger.error "📁 Too many files in bulk upload: #{e.message}"
+
+      error_message = "Too many files selected for upload. Maximum allowed: #{max_files} files. Please select fewer files and try again."
+
+      if request.xhr? || request.format.json?
+        render json: {
+          success: false,
+          error: error_message,
+          max_files: max_files
+        }, status: :unprocessable_entity
+      else
+        flash[:alert] = error_message
+        redirect_to ragdoll.documents_path
+      end
     rescue => e
       logger.error "💥 Fatal error in bulk_upload: #{e.message}"
       logger.error e.backtrace.join("\n")
-      
+
       if request.xhr? || request.format.json?
         render json: {
           success: false,

@@ -469,6 +469,13 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Please select at least one file.');
         return;
       }
+
+      // Check file limit
+      const maxFiles = 2000; // Match our server-side limit
+      if (fileInput.files.length > maxFiles) {
+        alert(`Too many files selected! Maximum allowed: ${maxFiles} files. Please select fewer files.`);
+        return;
+      }
       
       // Log detailed file selection information for debugging
       console.log('📁 File selection analysis:');
@@ -994,11 +1001,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const firstFile = files[0];
         const pathParts = firstFile.webkitRelativePath.split('/');
         const directoryName = pathParts[0];
-        
+
+        // Check file limit
+        const maxFiles = 2000; // Match our server-side limit
+        let message = `Selected directory: <strong>${directoryName}</strong> (${files.length} files)`;
+
+        if (files.length > maxFiles) {
+          message += `<br><span class="text-danger">⚠️ Too many files selected! Maximum allowed: ${maxFiles} files. Please select a smaller directory.</span>`;
+          // Disable submit button
+          const submitBtn = document.getElementById('directory-upload-btn');
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Too Many Files - Cannot Upload';
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-danger');
+          }
+        } else {
+          // Re-enable submit button if it was disabled
+          const submitBtn = document.getElementById('directory-upload-btn');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Upload Directory';
+            submitBtn.classList.remove('btn-danger');
+            submitBtn.classList.add('btn-primary');
+          }
+        }
+
         // Update form text with selection info
         const formText = directoryInput.nextElementSibling;
         if (formText && formText.classList.contains('form-text')) {
-          formText.innerHTML = `Selected directory: <strong>${directoryName}</strong> (${files.length} files)`;
+          formText.innerHTML = message;
         }
       }
     });
