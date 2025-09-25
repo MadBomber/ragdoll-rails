@@ -342,28 +342,25 @@ module Ragdoll
         
         processed_count = 0
         results = []
-        
-        # Process files in batches to avoid "too many open files" error
-        batch_size = 50  # Process 50 files at a time
-        uploaded_files.each_slice(batch_size).with_index do |file_batch, batch_index|
-          file_batch.each_with_index do |file, batch_file_index|
-            index = batch_index * batch_size + batch_file_index
+
+        # Process files individually to enable real-time feedback
+        uploaded_files.each_with_index do |file, index|
           next unless file.respond_to?(:original_filename)
-          
+
           logger.info "Processing file #{index + 1}: #{file.original_filename}"
-          
+
           begin
             # Generate unique file ID
             file_id = "#{session_id}_#{index}_#{Time.current.to_i}"
-            
+
             # Save uploaded file temporarily
             temp_path = ::Rails.root.join('tmp', 'uploads', "#{file_id}_#{file.original_filename}")
             FileUtils.mkdir_p(File.dirname(temp_path))
             File.binwrite(temp_path, file.read)
-            
+
             logger.info "File saved to: #{temp_path}"
-            
-            # Try to queue background job first, fallback to direct processing
+
+            # Queue individual ProcessFileJob for real-time feedback
             begin
               if defined?(::Ragdoll::ProcessFileJob)
                 ::Ragdoll::ProcessFileJob.perform_later(file_id, session_id, file.original_filename, temp_path.to_s)
@@ -374,44 +371,40 @@ module Ragdoll
               end
             rescue => job_error
               logger.warn "Background job failed, processing directly: #{job_error.message}"
-              
-              # Process directly if job system is not available  
+
+              # Process directly if job system is not available
               force_duplicate = params[:ragdoll_document][:force_duplicate] == '1'
               result = ::Ragdoll.add_document(path: temp_path.to_s, force: force_duplicate)
-              
+
               if result[:success] && result[:document_id]
                 document = ::Ragdoll::Document.find(result[:document_id])
-                results << { 
-                  file: file.original_filename, 
+                results << {
+                  file: file.original_filename,
                   status: 'completed_sync',
                   document_id: document.id
                 }
                 logger.info "File processed synchronously: #{file.original_filename}"
               else
-                results << { 
-                  file: file.original_filename, 
+                results << {
+                  file: file.original_filename,
                   status: 'failed',
                   error: result[:error] || 'Unknown error'
                 }
               end
-              
+
               # Clean up temp file for sync processing
               File.delete(temp_path) if File.exist?(temp_path)
             end
-            
+
             processed_count += 1
           rescue => file_error
             logger.error "Error processing file #{file.original_filename}: #{file_error.message}"
-            results << { 
-              file: file.original_filename, 
+            results << {
+              file: file.original_filename,
               status: 'failed',
               error: file_error.message
             }
           end
-          end
-          
-          # Force garbage collection after each batch to free file descriptors
-          GC.start
         end
         
         logger.info "Returning success response for #{processed_count} files"
