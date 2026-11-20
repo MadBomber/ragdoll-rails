@@ -1,10 +1,19 @@
 # frozen_string_literal: true
 
+# DEPRECATED: This factory is deprecated. Use :ragdoll_unified_content instead.
+# Kept for backward compatibility during migration.
+
 FactoryBot.define do
-  factory :ragdoll_text_content, class: 'Ragdoll::TextContent' do
-    association :document, factory: :ragdoll_document
+  # Alias for unified content to maintain backward compatibility
+  factory :ragdoll_text_content, class: 'Ragdoll::UnifiedContent' do
+    association :unified_document, factory: :ragdoll_unified_document
     content { "This is test text content for the document." }
-    embedding_model { "text-embedding-3-small" }
+    original_media_type { "text" }
+    conversion_method { "direct" }
+    content_quality_score { 0.85 }
+    word_count { 8 }
+    character_count { 45 }
+    embedding_model { "text-embedding-3-large" }
     metadata { {} }
 
     trait :large_content do

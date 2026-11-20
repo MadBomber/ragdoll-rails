@@ -38,10 +38,13 @@
             <div class="col-md-6">
               <div class="mb-3">
                 <label class="form-label">Document Type</label>
-                <%= form.select :document_type, 
-                    options_for_select([["All Types", ""]] + ::Ragdoll::Document.distinct.pluck(:document_type).compact.map { |type| [type.titleize, type] }, @filters[:document_type]), 
-                    {}, 
-                    { class: "form-select" } %>
+                <%= form.select :document_type,
+                    options_for_select([["All Types", ""]] + ::Ragdoll::Document.distinct.pluck(:document_type).compact.map { |type| [type.titleize, type] }, @filters[:document_type]),
+                    {},
+                    { class: "form-select", title: "Document Type filtering is deprecated in unified text-based architecture" } %>
+                <small class="form-text text-warning">
+                  <i class="fas fa-exclamation-triangle"></i> Note: All media types are now converted to text for unified cross-modal search
+                </small>
               </div>
             </div>
             

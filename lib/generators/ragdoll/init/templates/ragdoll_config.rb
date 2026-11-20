@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-# Ragdoll RAG (Retrieval-Augmented Generation) Configuration
+# Ragdoll Unified Text-Based RAG Configuration
 # This initializer configures the Ragdoll Rails engine for your application.
+# All media types (images, audio, documents) are converted to searchable text.
 
 Ragdoll.configure do |config|
   # LLM Provider Configuration
@@ -39,9 +40,13 @@ Ragdoll.configure do |config|
     }
   }
 
-  # Embedding Model Configuration
+  # Unified Embedding Model Configuration
+  # Single model for all content types (converted to text)
   # Examples: 'text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002'
-  config.embedding_model = 'text-embedding-3-small'
+  config.embedding_model = 'text-embedding-3-large'
+
+  # Enable unified text-based architecture
+  config.use_unified_content = true
   
   # Default model for chat/completion
   config.default_model = 'gpt-4o-mini'
@@ -49,6 +54,13 @@ Ragdoll.configure do |config|
   # Text Processing Configuration
   config.chunk_size = 1000
   config.chunk_overlap = 200
+
+  # Text Conversion Settings (for unified architecture)
+  config.text_conversion = {
+    image_detail_level: :comprehensive,  # :minimal, :standard, :comprehensive, :analytical
+    audio_transcription_provider: :openai,  # :openai, :azure, :google, :whisper_local
+    enable_fallback_descriptions: true
+  }
 
   # Search Configuration
   config.search_similarity_threshold = 0.7
@@ -92,5 +104,6 @@ Ragdoll::Rails.configure do |config|
   config.max_file_size = 10.megabytes
   
   # Allowed file types for document upload
-  config.allowed_file_types = %w[pdf docx txt md html htm json xml csv]
+  # All types are converted to text: images -> descriptions, audio -> transcripts
+  config.allowed_file_types = %w[pdf docx txt md html htm json xml csv jpg jpeg png gif mp3 wav m4a]
 end

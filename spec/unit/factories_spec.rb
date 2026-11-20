@@ -16,7 +16,9 @@ RSpec.describe 'Factory definitions' do
       expect(factory_files).not_to be_empty
       expect(factory_files.any? { |f| f.include?('ragdoll_documents') }).to be true
       expect(factory_files.any? { |f| f.include?('ragdoll_embeddings') }).to be true
-      expect(factory_files.any? { |f| f.include?('ragdoll_text_contents') }).to be true
+      # Updated for unified text-based architecture
+      expect(factory_files.any? { |f| f.include?('ragdoll_unified_contents') }).to be true
+      expect(factory_files.any? { |f| f.include?('ragdoll_unified_documents') }).to be true
     end
   end
 end

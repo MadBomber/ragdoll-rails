@@ -31,9 +31,10 @@ See Also:
 
 ## ✨ Features
 
-- 🔍 **Semantic Search** - Vector similarity search with flexible embedding models and pgvector
+- 🔄 **Unified Text-Based RAG** - All media types converted to searchable text before vectorization
+- 🔍 **Cross-Modal Search** - Find images by descriptions, audio by transcripts, documents by content
 - 🤖 **Multi-Provider Support** - OpenAI, Anthropic, Google, Azure, Ollama, HuggingFace via ruby_llm
-- 📄 **Multi-format Support** - PDF, DOCX, text, HTML, JSON, XML, CSV document parsing
+- 📄 **Multi-format Support** - PDF, DOCX, text, HTML, JSON, XML, CSV, images (AI descriptions), audio (transcripts)
 - 🧠 **Context Enhancement** - Automatically enhance AI prompts with relevant context
 - ⚡ **Background Processing** - Asynchronous document processing with Sidekiq
 - 🎛️ **Simple API** - Clean, intuitive interface for Rails integration

@@ -99,8 +99,11 @@ module Ragdoll
               }
               
               # Add document type filter if specified
+              # NOTE: Document type filtering is deprecated in unified text-based architecture
+              # All media types are now converted to text for unified cross-modal search
               if @filters[:document_type].present?
                 search_params[:document_type] = @filters[:document_type]
+                ::Rails.logger.warn "⚠️ Document type filtering is deprecated in unified text-based RAG architecture"
               end
               
               # Add status filter if specified
@@ -207,8 +210,11 @@ module Ragdoll
             }
             
             # Add document type filter if specified
+            # NOTE: Document type filtering is deprecated in unified text-based architecture
+            # All media types are now converted to text for unified cross-modal search
             if @filters[:document_type].present?
               fulltext_params[:document_type] = @filters[:document_type]
+              ::Rails.logger.warn "⚠️ Document type filtering is deprecated in unified text-based RAG architecture"
             end
             
             # Add status filter if specified
@@ -229,7 +235,7 @@ module Ragdoll
                 
                 @detailed_results << {
                   document: document,
-                  content: document.metadata&.dig('summary') || document.title || "No summary available",
+                  content: document.summary || document.metadata&.dig('summary') || document.title || "No summary available",
                   search_type: 'fulltext',
                   similarity: fulltext_similarity
                 }
@@ -258,7 +264,7 @@ module Ragdoll
                       @below_threshold_results << {
                         document_id: document.id,
                         similarity: similarity,
-                        content: document.metadata&.dig('summary') || document.title || "No summary available"
+                        content: document.summary || document.metadata&.dig('summary') || document.title || "No summary available"
                       }
                     end
                   end

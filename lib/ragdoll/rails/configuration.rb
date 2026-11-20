@@ -12,7 +12,8 @@ module Ragdoll
         @job_adapter = :sidekiq
         @queue_name = :ragdoll
         @max_file_size = 10 * 1024 * 1024 # 10MB
-        @allowed_file_types = %w[pdf docx txt md html htm json xml csv]
+        # Unified text-based architecture supports all media types converted to text
+        @allowed_file_types = %w[pdf docx txt md html htm json xml csv jpg jpeg png gif mp3 wav m4a]
       end
 
       def configure_core
