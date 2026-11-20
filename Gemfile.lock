@@ -23,7 +23,7 @@ GIT
 PATH
   remote: .
   specs:
-    ragdoll-rails (0.1.11)
+    ragdoll-rails (0.1.12)
       actioncable (>= 8.0.2)
       ragdoll
       rails (>= 8.0.2)
@@ -436,6 +436,7 @@ PLATFORMS
   x86-linux-gnu
   x86-linux-musl
   x86_64-darwin
+  x86_64-linux
   x86_64-linux-gnu
   x86_64-linux-musl
 
@@ -453,4 +454,4 @@ DEPENDENCIES
   rspec-mocks
 
 BUNDLED WITH
-   2.6.3
+  2.6.3
