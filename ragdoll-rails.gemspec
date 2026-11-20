@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.description = "Rails engine providing ActiveRecord integration, background jobs, and UI components for the Ragdoll RAG (Retrieval-Augmented Generation) system"
   spec.homepage    = "https://github.com/MadBomber/ragdoll-rails"
   spec.license     = "MIT"
-  spec.required_ruby_version = ">= 3.2.0"
+  spec.required_ruby_version = ">= 4.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
